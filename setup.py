@@ -10,9 +10,11 @@ BASE_DIR = os.path.dirname(__file__)
 README_PATH = os.path.join(BASE_DIR, 'README.md')
 VERSION_PATH = os.path.join(BASE_DIR, 'VERSION')
 LICENSE_PATH = os.path.join(BASE_DIR, 'LICENSE')
+REQS_PATH = os.path.join(BASE_DIR, 'requirements.txt')
 DESCRIPTION = open(README_PATH).read()
 VERSION = open(VERSION_PATH).read()
 LICENSE = open(LICENSE_PATH).readline().strip()
+INSTALL_REQS = open(REQS_PATH).read().splitlines()
 
 setup(
     name='pyinstaller_utils',
@@ -27,4 +29,5 @@ setup(
     platforms='any',
     keywords=['pyinstaller'],
     classifiers=[],
+    install_requires=INSTALL_REQS,
     )
