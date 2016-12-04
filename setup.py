@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 
 import os
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+
+from setuptools import setup, find_packages
 
 BASE_DIR = os.path.dirname(__file__)
 README_PATH = os.path.join(BASE_DIR, 'README.md')
@@ -24,7 +22,7 @@ setup(
     author='Mars Galactic',
     author_email='xoviat@users.noreply.github.com',
     url='https://github.com/xoviat/pyinstaller_utils',
-    py_modules=['pyinstaller_utils'],
+    packages=find_packages(),
     license=LICENSE,
     platforms='any',
     keywords=['pyinstaller'],
