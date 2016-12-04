@@ -6,7 +6,7 @@ from PyInstaller.building.build_main import Analysis
 
 def Entrypoint(dist, group, name,
                scripts=None, pathex=None, hiddenimports=None,
-               hookspath=None, excludes=None, runtime_hooks=None):
+               hookspath=None, excludes=None, runtime_hooks=None, **kwargs):
     import pkg_resources
 
     # get toplevel packages of distribution from metadata
@@ -37,4 +37,5 @@ def Entrypoint(dist, group, name,
         for package in packages:
             fh.write("import {0}\n".format(package))
 
-    return Analysis([script_path] + scripts, pathex, hiddenimports, hookspath, excludes, runtime_hooks)
+    return Analysis([script_path] + scripts, pathex=pathex, hiddenimports=hiddenimports, hookspath=hookspath,
+                    excludes=excludes, runtime_hooks=runtime_hooks, **kwargs)
