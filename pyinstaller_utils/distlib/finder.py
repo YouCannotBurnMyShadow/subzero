@@ -15,7 +15,7 @@ import sys
 import types
 import zipfile
 
-import cx_Freeze.hooks
+import pyinstaller_utils.distlib.hooks
 
 BUILD_LIST = opcode.opmap["BUILD_LIST"]
 INPLACE_ADD = opcode.opmap["INPLACE_ADD"]
@@ -148,7 +148,7 @@ class ModuleFinder(object):
         self._builtinModules = dict.fromkeys(sys.builtin_module_names)
         self._badModules = {}
         self._zip_modules_cache = ZipModulesCache()
-        cx_Freeze.hooks.initialize(self)
+        pyinstaller_utils.distlib.hooks.initialize(self)
         initialExcludedModules = self.excludes.copy()
         self._AddBaseModules()
 
@@ -158,7 +158,7 @@ class ModuleFinder(object):
            can result in behavior that differs from running from source;
            also include modules used within the bootstrap code.
 
-           When cx_Freeze is built, these modules (and modules they load) are
+           When distlib is built, these modules (and modules they load) are
            included in the startup zip file.
            """
         self.IncludeModule("traceback")
@@ -534,7 +534,7 @@ class ModuleFinder(object):
     def _RunHook(self, hookName, moduleName, *args):
         """Run hook for the given module if one is present."""
         name = "%s_%s" % (hookName, moduleName.replace(".", "_"))
-        method = getattr(cx_Freeze.hooks, name, None)
+        method = getattr(pyinstaller_utils.distlib.hooks, name, None)
         if method is not None:
             method(self, *args)
 

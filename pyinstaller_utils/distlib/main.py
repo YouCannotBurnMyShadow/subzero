@@ -4,7 +4,7 @@ import optparse
 import os
 import sys
 
-import cx_Freeze
+import pyinstaller_utils.distlib
 
 __all__ = ["main"]
 
@@ -21,7 +21,7 @@ VERSION = \
     %%prog %s
     Copyright (c) 2007-2016 Anthony Tuininga. All rights reserved.
     Copyright (c) 2001-2006 Computronix Corporation. All rights reserved.""" % \
-    cx_Freeze.version
+    pyinstaller_utils.distlib.version
 
 
 def ParseCommandLine():
@@ -54,7 +54,7 @@ def ParseCommandLine():
                       help="script which will be executed upon startup; if the name "
                            "of the file is not an absolute file name, the "
                            "subdirectory initscripts (rooted in the directory in "
-                           "which the cx_Freeze package is found) will be searched "
+                           "which the distlib package is found) will be searched "
                            "for a file matching the name")
     parser.add_option("--target-dir", "--install-dir",
                       dest="targetDir",
@@ -158,20 +158,20 @@ def ParseCommandLine():
 
 def main():
     options = ParseCommandLine()
-    executables = [cx_Freeze.Executable(options.script,
-                                        initScript=options.initScript,
-                                        base=options.baseName,
-                                        icon=options.icon,
-                                        targetName=options.targetName)
+    executables = [pyinstaller_utils.distlib.Executable(options.script,
+                                                        initScript=options.initScript,
+                                                        base=options.baseName,
+                                                        icon=options.icon,
+                                                        targetName=options.targetName)
                    ]
-    freezer = cx_Freeze.Freezer(executables,
-                                includes=options.includeModules,
-                                excludes=options.excludeModules,
-                                replacePaths=options.replacePaths,
-                                compress=options.compress,
-                                optimizeFlag=options.optimized,
-                                path=None,
-                                targetDir=options.targetDir,
-                                zipIncludes=options.zipIncludes,
-                                silent=options.silent)
+    freezer = pyinstaller_utils.distlib.Freezer(executables,
+                                                includes=options.includeModules,
+                                                excludes=options.excludeModules,
+                                                replacePaths=options.replacePaths,
+                                                compress=options.compress,
+                                                optimizeFlag=options.optimized,
+                                                path=None,
+                                                targetDir=options.targetDir,
+                                                zipIncludes=options.zipIncludes,
+                                                silent=options.silent)
     freezer.Freeze()

@@ -1,7 +1,7 @@
 # This file was originally taken from cx_Freeze by Anthony Tuininga, and is licensed under the  PSF license.
 
 """
-This module contains utility functions shared between cx_Freeze modules.
+This module contains utility functions shared between distlib modules.
 """
 
 

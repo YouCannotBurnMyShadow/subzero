@@ -6,7 +6,7 @@ import stat
 import subprocess
 from distutils.core import Command
 
-from cx_Freeze.common import normalize_to_list
+from pyinstaller_utils.distlib.common import normalize_to_list
 
 __all__ = ["bdist_dmg", "bdist_mac"]
 

@@ -19,7 +19,7 @@ import sys
 import time
 import zipfile
 
-import cx_Freeze
+import pyinstaller_utils.distlib
 
 __all__ = ["ConfigError", "ConstantsModule", "Executable", "Freezer"]
 
@@ -96,7 +96,7 @@ def process_path_specs(specs):
 
 
 def get_resource_file_path(dirName, name, ext):
-    """Return the path to a resource file shipped with cx_Freeze.
+    """Return the path to a resource file shipped with distlib.
     
     This is used to find our base executables and initscripts when they are
     just specified by name.
@@ -104,7 +104,7 @@ def get_resource_file_path(dirName, name, ext):
     if os.path.isabs(name):
         return name
     name = os.path.normcase(name)
-    fullDir = os.path.join(os.path.dirname(cx_Freeze.__file__), dirName)
+    fullDir = os.path.join(os.path.dirname(pyinstaller_utils.distlib.__file__), dirName)
     if os.path.isdir(fullDir):
         for fileName in os.listdir(fullDir):
             checkName, checkExt = \
@@ -212,8 +212,8 @@ class Freezer(object):
         # Copy icon
         if exe.icon is not None:
             if sys.platform == "win32":
-                import cx_Freeze.util
-                cx_Freeze.util.AddIcon(exe.targetName, exe.icon)
+                import pyinstaller_utils.distlib.util
+                pyinstaller_utils.distlib.util.AddIcon(exe.targetName, exe.icon)
             else:
                 targetName = os.path.join(os.path.dirname(exe.targetName),
                                           os.path.basename(exe.icon))
@@ -255,9 +255,9 @@ class Freezer(object):
            be included, generally because they contain standard system
            libraries."""
         if sys.platform == "win32":
-            import cx_Freeze.util
-            systemDir = cx_Freeze.util.GetSystemDir()
-            windowsDir = cx_Freeze.util.GetWindowsDir()
+            import pyinstaller_utils.distlib.util
+            systemDir = pyinstaller_utils.distlib.util.GetSystemDir()
+            windowsDir = pyinstaller_utils.distlib.util.GetWindowsDir()
             return [windowsDir, systemDir, os.path.join(windowsDir, "WinSxS")]
         elif sys.platform == "darwin":
             return ["/lib", "/usr/lib", "/System/Library/Frameworks"]
@@ -275,10 +275,10 @@ class Freezer(object):
                 origPath = os.environ["PATH"]
                 os.environ["PATH"] = origPath + os.pathsep + \
                                      os.pathsep.join(sys.path)
-                import cx_Freeze.util
+                import pyinstaller_utils.distlib.util
                 try:
-                    dependentFiles = cx_Freeze.util.GetDependentFiles(path)
-                except cx_Freeze.util.BindError:
+                    dependentFiles = pyinstaller_utils.distlib.util.GetDependentFiles(path)
+                except pyinstaller_utils.distlib.util.BindError:
                     # Sometimes this gets called when path is not actually a library
                     # See issue 88
                     dependentFiles = []
@@ -316,7 +316,7 @@ class Freezer(object):
                         dependentFiles.append(dependentFile)
                 if sys.platform == "darwin":
                     # Make library paths absolute. This is needed to use
-                    # cx_Freeze on OSX in e.g. a conda-based distribution.
+                    # distlib on OSX in e.g. a conda-based distribution.
                     # Note that with @rpath we just assume Python's lib dir,
                     # which should work in most cases.
                     dirname = os.path.dirname(path)
@@ -331,8 +331,8 @@ class Freezer(object):
     def _GetModuleFinder(self, argsSource=None):
         if argsSource is None:
             argsSource = self
-        finder = cx_Freeze.ModuleFinder(self.includeFiles, self.excludes,
-                                        self.path, self.replacePaths)
+        finder = pyinstaller_utils.distlib.ModuleFinder(self.includeFiles, self.excludes,
+                                                        self.path, self.replacePaths)
         for name in self.namespacePackages:
             package = finder.IncludeModule(name, namespace=True)
             package.ExtendPath()
@@ -617,8 +617,8 @@ class Freezer(object):
         self.filesCopied = {}
         self.linkerWarnings = {}
         self.msvcRuntimeDir = None
-        import cx_Freeze.util
-        cx_Freeze.util.SetOptimizeFlag(self.optimizeFlag)
+        import pyinstaller_utils.distlib.util
+        pyinstaller_utils.distlib.util.SetOptimizeFlag(self.optimizeFlag)
 
         self.finder = self._GetModuleFinder()
         for executable in self.executables:
