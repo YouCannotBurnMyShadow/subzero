@@ -56,11 +56,9 @@ MSVCR_MANIFEST_TEMPLATE = """
 """
 
 PYINSTALLER_SPEC_TEMPLATE = """
-from pyinstaller_utils import Entrypoint
-
 block_cipher = None
 
-a = Entrypoint('{project_name}', 'console_scripts', '{entry_point_name}',
+a = Analysis({scripts},
              pathex=[SPECPATH] + {pathex},
              binaries=None,
              datas={datas},
@@ -245,15 +243,50 @@ class Freezer(object):
         for executable in self.executables:
             executable._VerifyConfiguration(self)
 
+    def _GenerateScript(self, name, entry_point):
+        """
+        Generates a script given an entry point.
+        :param entry_point:
+        :return: The script location
+        """
+
+        # get toplevel packages of distribution from metadata
+        def get_toplevel(dist):
+            distribution = pkg_resources.get_distribution(dist)
+            if distribution.has_metadata('top_level.txt'):
+                return list(distribution.get_metadata('top_level.txt').split())
+            else:
+                return []
+
+        packages = hiddenimports or []
+        for distribution in hiddenimports:
+            packages += get_toplevel(distribution)
+
+        scripts = scripts or []
+        pathex = pathex or []
+        # get the entry point
+        ep = pkg_resources.get_entry_info(dist, group, name)
+        # insert path of the egg at the verify front of the search path
+        pathex = [ep.dist.location] + pathex
+        # script name must not be a valid module name to avoid name clashes on import
+        script_path = os.path.join(DEFAULT_WORKPATH, name + '-script.py')
+        with open(script_path, 'w') as fh:
+            fh.write("import {0}\n".format(ep.module_name))
+            fh.write("{0}.{1}()\n".format(ep.module_name, '.'.join(ep.attrs)))
+            for package in packages:
+                fh.write("import {0}\n".format(package))
+
+        return script_path
+
     # TODO: Bridge to Pyinstaller
     def _FreezeExecutable(self, executable):
         pass
 
     def Freeze(self):
+        for name, entry_point in self.entry_points.iter():
+            self.scripts.append(self._GenerateScript(name, entry_point))
         for script in self.scripts:
             self._FreezeExecutable(script)
-        for entry_point in self.entry_points:
-            self._FreezeExecutable(entry_point)
 
 class ConfigError(Exception):
     def __init__(self, format, *args):
