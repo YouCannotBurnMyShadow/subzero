@@ -6,10 +6,8 @@ Base class for freezing scripts into executables.
 
 from __future__ import print_function
 
-import datetime
 import distutils.sysconfig
 import os
-import socket
 import sys
 
 import pyinstaller_utils.distlib
@@ -142,7 +140,7 @@ def get_resource_file_path(dirName, name, ext):
 
 
 class Freezer(object):
-    def __init__(self, executables, constantsModules=[], includes=[],
+    def __init__(self, scripts, entry_points, constantsModules=[], includes=[],
                  excludes=[], packages=[], replacePaths=[], compress=True,
                  optimizeFlag=0, path=None,
                  targetDir=None, binIncludes=[], binExcludes=[],
@@ -151,7 +149,8 @@ class Freezer(object):
                  namespacePackages=[], metadata=None,
                  includeMSVCR=False, zipIncludePackages=[],
                  zipExcludePackages=["*"]):
-        self.executables = list(executables)
+        self.executables = list(scripts)
+        self.entry_points = dict(entry_points)
         self.constantsModules = list(constantsModules)
         self.includes = list(includes)
         self.excludes = list(excludes)
@@ -251,8 +250,10 @@ class Freezer(object):
         pass
 
     def Freeze(self):
-        for executable in self.executables:
-            self._FreezeExecutable(executable)
+        for script in self.scripts:
+            self._FreezeExecutable(script)
+        for entry_point in self.entry_points:
+            self._FreezeExecutable(entry_point)
 
 class ConfigError(Exception):
     def __init__(self, format, *args):
@@ -260,90 +261,6 @@ class ConfigError(Exception):
 
     def __str__(self):
         return self.what
-
-
-class Executable(object):
-    def __init__(self, script, initScript=None, base=None,
-                 targetName=None, icon=None, shortcutName=None,
-                 shortcutDir=None, copyright=None, trademarks=None):
-        self.script = script
-        self.initScript = initScript or "Console"
-        self.base = base or "Console"
-        self.targetName = targetName
-        self.icon = icon
-        self.shortcutName = shortcutName
-        self.shortcutDir = shortcutDir
-        self.copyright = copyright
-        self.trademarks = trademarks
-
-    def __repr__(self):
-        return "<Executable script=%s>" % self.script
-
-    def _VerifyConfiguration(self, freezer):
-        self._GetInitScriptFileName()
-        self._GetBaseFileName()
-        if self.targetName is None:
-            name, ext = os.path.splitext(os.path.basename(self.script))
-            baseName, ext = os.path.splitext(self.base)
-            self.targetName = name + ext
-        name, ext = os.path.splitext(self.targetName)
-        self.moduleName = "%s__main__" % os.path.normcase(name)
-        self.initModuleName = "%s__init__" % os.path.normcase(name)
-        self.targetName = os.path.join(freezer.targetDir, self.targetName)
-
-    def _GetBaseFileName(self):
-        name = self.base
-        ext = ".exe" if sys.platform == "win32" else ""
-        self.base = get_resource_file_path("bases", name, ext)
-        if self.base is None:
-            raise ConfigError("no base named %s", name)
-
-    def _GetInitScriptFileName(self):
-        name = self.initScript
-        self.initScript = get_resource_file_path("initscripts", name, ".py")
-        if self.initScript is None:
-            raise ConfigError("no initscript named %s", name)
-
-
-class ConstantsModule(object):
-    def __init__(self, releaseString=None, copyright=None,
-                 moduleName="BUILD_CONSTANTS", timeFormat="%B %d, %Y %H:%M:%S"):
-        self.moduleName = moduleName
-        self.timeFormat = timeFormat
-        self.values = {}
-        self.values["BUILD_RELEASE_STRING"] = releaseString
-        self.values["BUILD_COPYRIGHT"] = copyright
-
-    def Create(self, finder):
-        """Create the module which consists of declaration statements for each
-           of the values."""
-        today = datetime.datetime.today()
-        sourceTimestamp = 0
-        for module in finder.modules:
-            if module.file is None:
-                continue
-            if module.inZipFile:
-                continue
-            if not os.path.exists(module.file):
-                raise ConfigError("no file named %s (for module %s)",
-                                  module.file, module.name)
-            timestamp = os.stat(module.file).st_mtime
-            sourceTimestamp = max(sourceTimestamp, timestamp)
-        sourceTimestamp = datetime.datetime.fromtimestamp(sourceTimestamp)
-        self.values["BUILD_TIMESTAMP"] = today.strftime(self.timeFormat)
-        self.values["BUILD_HOST"] = socket.gethostname().split(".")[0]
-        self.values["SOURCE_TIMESTAMP"] = \
-            sourceTimestamp.strftime(self.timeFormat)
-        module = finder._AddModule(self.moduleName)
-        sourceParts = []
-        names = list(self.values.keys())
-        names.sort()
-        for name in names:
-            value = self.values[name]
-            sourceParts.append("%s = %r" % (name, value))
-        source = "\n".join(sourceParts)
-        module.code = compile(source, "%s.py" % self.moduleName, "exec")
-        return module
 
 
 class VersionInfo(object):

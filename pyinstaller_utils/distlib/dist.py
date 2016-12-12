@@ -201,7 +201,8 @@ class build_exe(distutils.core.Command):
                 name, stringValue = parts
                 value = eval(stringValue)
             constantsModule.values[name] = value
-        freezer = pyinstaller_utils.distlib.Freezer(self.distribution.executables,
+        freezer = pyinstaller_utils.distlib.Freezer(self.distribution.scripts,
+                                                    self.distribution.entry_points,
                                                     [constantsModule], self.includes, self.excludes, self.packages,
                                                     self.replace_paths, (not self.no_compress), self.optimize,
                                                     self.path, self.build_exe,
