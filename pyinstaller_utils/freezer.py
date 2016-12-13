@@ -12,7 +12,7 @@ import sys
 
 from pkg_resources import EntryPoint
 
-import pyinstaller_utils.distlib
+import pyinstaller_utils
 
 __all__ = ["ConfigError", "ConstantsModule", "Executable", "Freezer"]
 
@@ -122,7 +122,7 @@ def process_path_specs(specs):
 
 
 def get_resource_file_path(dirName, name, ext):
-    """Return the path to a resource file shipped with distlib.
+    """Return the path to a resource file shipped with
     
     This is used to find our base executables and initscripts when they are
     just specified by name.
@@ -130,7 +130,7 @@ def get_resource_file_path(dirName, name, ext):
     if os.path.isabs(name):
         return name
     name = os.path.normcase(name)
-    fullDir = os.path.join(os.path.dirname(pyinstaller_utils.distlib.__file__), dirName)
+    fullDir = os.path.join(os.path.dirname(pyinstaller_utils.__file__), dirName)
     if os.path.isdir(fullDir):
         for fileName in os.listdir(fullDir):
             checkName, checkExt = \
@@ -206,9 +206,9 @@ class Freezer(object):
            be included, generally because they contain standard system
            libraries."""
         if sys.platform == "win32":
-            import pyinstaller_utils.distlib.util
-            systemDir = pyinstaller_utils.distlib.util.GetSystemDir()
-            windowsDir = pyinstaller_utils.distlib.util.GetWindowsDir()
+            import pyinstaller_utils.util
+            systemDir = pyinstaller_utils.util.GetSystemDir()
+            windowsDir = pyinstaller_utils.util.GetWindowsDir()
             return [windowsDir, systemDir, os.path.join(windowsDir, "WinSxS")]
         elif sys.platform == "darwin":
             return ["/lib", "/usr/lib", "/System/Library/Frameworks"]

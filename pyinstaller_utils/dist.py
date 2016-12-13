@@ -13,8 +13,8 @@ import distutils.version
 import os
 import sys
 
-import pyinstaller_utils.distlib
-from pyinstaller_utils.distlib.common import normalize_to_list
+import pyinstaller_utils
+from pyinstaller_utils.common import normalize_to_list
 
 __all__ = ["bdist_rpm", "build", "build_exe", "install", "install_exe",
            "setup"]
@@ -191,7 +191,7 @@ class build_exe(distutils.core.Command):
 
     def run(self):
         metadata = self.distribution.metadata
-        constantsModule = pyinstaller_utils.distlib.ConstantsModule(metadata.version)
+        constantsModule = pyinstaller_utils.ConstantsModule(metadata.version)
         for constant in self.constants:
             parts = constant.split("=")
             if len(parts) == 1:
@@ -201,23 +201,23 @@ class build_exe(distutils.core.Command):
                 name, stringValue = parts
                 value = eval(stringValue)
             constantsModule.values[name] = value
-        freezer = pyinstaller_utils.distlib.Freezer(self.distribution.scripts,
-                                                    self.distribution.entry_points,
-                                                    [constantsModule], self.includes, self.excludes, self.packages,
-                                                    self.replace_paths, (not self.no_compress), self.optimize,
-                                                    self.path, self.build_exe,
-                                                    includeMSVCR=self.include_msvcr,
-                                                    includeFiles=self.include_files,
-                                                    binIncludes=self.bin_includes,
-                                                    binExcludes=self.bin_excludes,
-                                                    zipIncludes=self.zip_includes,
-                                                    silent=self.silent,
-                                                    namespacePackages=self.namespace_packages,
-                                                    binPathIncludes=self.bin_path_includes,
-                                                    binPathExcludes=self.bin_path_excludes,
-                                                    metadata=metadata,
-                                                    zipIncludePackages=self.zip_include_packages,
-                                                    zipExcludePackages=self.zip_exclude_packages)
+        freezer = pyinstaller_utils.Freezer(self.distribution.scripts,
+                                            self.distribution.entry_points,
+                                            [constantsModule], self.includes, self.excludes, self.packages,
+                                            self.replace_paths, (not self.no_compress), self.optimize,
+                                            self.path, self.build_exe,
+                                            includeMSVCR=self.include_msvcr,
+                                            includeFiles=self.include_files,
+                                            binIncludes=self.bin_includes,
+                                            binExcludes=self.bin_excludes,
+                                            zipIncludes=self.zip_includes,
+                                            silent=self.silent,
+                                            namespacePackages=self.namespace_packages,
+                                            binPathIncludes=self.bin_path_includes,
+                                            binPathExcludes=self.bin_path_excludes,
+                                            metadata=metadata,
+                                            zipIncludePackages=self.zip_include_packages,
+                                            zipExcludePackages=self.zip_exclude_packages)
         freezer.Freeze()
 
     def set_source_location(self, name, *pathParts):
@@ -338,12 +338,12 @@ def setup(**attrs):
     commandClasses = attrs.setdefault("cmdclass", {})
     if sys.platform == "win32":
         if sys.version_info[:2] >= (2, 5):
-            _AddCommandClass(commandClasses, "bdist_msi", pyinstaller_utils.distlib.bdist_msi)
+            _AddCommandClass(commandClasses, "bdist_msi", pyinstaller_utils.bdist_msi)
     elif sys.platform == "darwin":
-        _AddCommandClass(commandClasses, "bdist_dmg", pyinstaller_utils.distlib.bdist_dmg)
-        _AddCommandClass(commandClasses, "bdist_mac", pyinstaller_utils.distlib.bdist_mac)
+        _AddCommandClass(commandClasses, "bdist_dmg", pyinstaller_utils.bdist_dmg)
+        _AddCommandClass(commandClasses, "bdist_mac", pyinstaller_utils.bdist_mac)
     else:
-        _AddCommandClass(commandClasses, "bdist_rpm", pyinstaller_utils.distlib.bdist_rpm)
+        _AddCommandClass(commandClasses, "bdist_rpm", pyinstaller_utils.bdist_rpm)
     _AddCommandClass(commandClasses, "build", build)
     _AddCommandClass(commandClasses, "build_exe", build_exe)
     _AddCommandClass(commandClasses, "install", install)

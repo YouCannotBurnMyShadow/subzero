@@ -4,7 +4,7 @@ import optparse
 import os
 import sys
 
-import pyinstaller_utils.distlib
+import pyinstaller_utils
 
 __all__ = ["main"]
 
@@ -21,7 +21,7 @@ VERSION = \
     %%prog %s
     Copyright (c) 2007-2016 Anthony Tuininga. All rights reserved.
     Copyright (c) 2001-2006 Computronix Corporation. All rights reserved.""" % \
-    pyinstaller_utils.distlib.version
+    pyinstaller_utils.version
 
 
 def ParseCommandLine():
@@ -158,20 +158,20 @@ def ParseCommandLine():
 
 def main():
     options = ParseCommandLine()
-    executables = [pyinstaller_utils.distlib.Executable(options.script,
-                                                        initScript=options.initScript,
-                                                        base=options.baseName,
-                                                        icon=options.icon,
-                                                        targetName=options.targetName)
+    executables = [pyinstaller_utils.Executable(options.script,
+                                                initScript=options.initScript,
+                                                base=options.baseName,
+                                                icon=options.icon,
+                                                targetName=options.targetName)
                    ]
-    freezer = pyinstaller_utils.distlib.Freezer(executables,
-                                                includes=options.includeModules,
-                                                excludes=options.excludeModules,
-                                                replacePaths=options.replacePaths,
-                                                compress=options.compress,
-                                                optimizeFlag=options.optimized,
-                                                path=None,
-                                                targetDir=options.targetDir,
-                                                zipIncludes=options.zipIncludes,
-                                                silent=options.silent)
+    freezer = pyinstaller_utils.Freezer(executables,
+                                        includes=options.includeModules,
+                                        excludes=options.excludeModules,
+                                        replacePaths=options.replacePaths,
+                                        compress=options.compress,
+                                        optimizeFlag=options.optimized,
+                                        path=None,
+                                        targetDir=options.targetDir,
+                                        zipIncludes=options.zipIncludes,
+                                        silent=options.silent)
     freezer.Freeze()

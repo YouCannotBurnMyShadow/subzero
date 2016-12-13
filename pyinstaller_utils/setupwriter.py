@@ -70,7 +70,7 @@ class SetupWriter(object):
         output = open(self.setupFileName, "w")
         w = lambda s: output.write(s + "\n")
 
-        w("from distlib import setup, Executable")
+        w("from pyinstaller_utils import setup, Executable")
         w("")
 
         w("# Dependencies are automatically detected, but it might need")
