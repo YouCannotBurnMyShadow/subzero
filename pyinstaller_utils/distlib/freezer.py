@@ -10,6 +10,8 @@ import distutils.sysconfig
 import os
 import sys
 
+from pkg_resources import EntryPoint
+
 import pyinstaller_utils.distlib
 
 __all__ = ["ConfigError", "ConstantsModule", "Executable", "Freezer"]
@@ -62,10 +64,10 @@ a = Analysis({scripts},
              pathex=[SPECPATH] + {pathex},
              binaries=None,
              datas={datas},
-             hiddenimports=[],
-             hookspath=[],
-             runtime_hooks=[],
-             excludes=[],
+             hiddenimports={hiddenimports},
+             hookspath={hookspath},
+             runtime_hooks={runtime_hooks},
+             excludes={excludes},
              win_no_prefer_redirects=False,
              win_private_assemblies=False,
              cipher=block_cipher)
@@ -148,7 +150,7 @@ class Freezer(object):
                  includeMSVCR=False, zipIncludePackages=[],
                  zipExcludePackages=["*"]):
         self.scripts = list(scripts)
-        self.entry_points = dict(entry_points)
+        self.entry_points = EntryPoint.parse_map(entry_points)['console_scripts']
         self.constantsModules = list(constantsModules)
         self.includes = list(includes)
         self.excludes = list(excludes)
@@ -243,7 +245,7 @@ class Freezer(object):
         for executable in self.executables:
             executable._VerifyConfiguration(self)
 
-    def _GenerateScript(self, name, entry_point):
+    def _GenerateScript(self, entry_point):
         """
         Generates a script given an entry point.
         :param entry_point:
@@ -280,11 +282,23 @@ class Freezer(object):
 
     # TODO: Bridge to Pyinstaller
     def _FreezeExecutable(self, executable):
+        parameters = {
+            'scripts':
+                'pathex':
+        'project_icon':
+        'project_name':
+        'hiddenimports':
+        'hookspath':
+        'runtime_hooks':
+        'excludes':
+        }
+
+        spec_contents = PYINSTALLER_SPEC_TEMPLATE.format(**parameters)
         pass
 
     def Freeze(self):
-        for name, entry_point in self.entry_points.iter():
-            self.scripts.append(self._GenerateScript(name, entry_point))
+        for entry_point in self.entry_points:
+            self.scripts.append(self._GenerateScript(entry_point))
         for script in self.scripts:
             self._FreezeExecutable(script)
 
