@@ -57,40 +57,6 @@ MSVCR_MANIFEST_TEMPLATE = """
 </assembly>
 """
 
-PYINSTALLER_SPEC_TEMPLATE = """
-block_cipher = None
-
-a = Analysis({scripts},
-             pathex=[SPECPATH] + {pathex},
-             binaries=None,
-             datas={datas},
-             hiddenimports={hiddenimports},
-             hookspath={hookspath},
-             runtime_hooks={runtime_hooks},
-             excludes={excludes},
-             win_no_prefer_redirects=False,
-             win_private_assemblies=False,
-             cipher=block_cipher)
-pyz = PYZ(a.pure, a.zipped_data,
-          cipher=block_cipher)
-exe = EXE(pyz,
-          a.scripts,
-          exclude_binaries=True,
-          name={project_name},
-          debug=False,
-          strip=False,
-          upx=True,
-          console=False,
-          icon={project_icon})
-coll = COLLECT(exe,
-               a.binaries,
-               a.zipfiles,
-               a.datas,
-               strip=False,
-               upx=True,
-               name={project_name})
-"""
-
 def process_path_specs(specs):
     """Prepare paths specified as config.
     
@@ -149,8 +115,11 @@ class Freezer(object):
                  namespacePackages=[], metadata=None,
                  includeMSVCR=False, zipIncludePackages=[],
                  zipExcludePackages=["*"]):
-        self.scripts = list(scripts)
-        self.entry_points = EntryPoint.parse_map(entry_points)['console_scripts']
+        self.scripts = list(scripts) if scripts else []
+        try:
+            self.entry_points = EntryPoint.parse_map(entry_points)['console_scripts'] if entry_points else []
+        except KeyError:
+            self.entry_points = []
         self.constantsModules = list(constantsModules)
         self.includes = list(includes)
         self.excludes = list(excludes)
@@ -205,16 +174,7 @@ class Freezer(object):
         """Return the paths of directories which contain files that should not
            be included, generally because they contain standard system
            libraries."""
-        if sys.platform == "win32":
-            import pyinstaller_utils.util
-            systemDir = pyinstaller_utils.util.GetSystemDir()
-            windowsDir = pyinstaller_utils.util.GetWindowsDir()
-            return [windowsDir, systemDir, os.path.join(windowsDir, "WinSxS")]
-        elif sys.platform == "darwin":
-            return ["/lib", "/usr/lib", "/System/Library/Frameworks"]
-        else:
-            return ["/lib", "/lib32", "/lib64", "/usr/lib", "/usr/lib32",
-                    "/usr/lib64"]
+        return []
 
     def _VerifyConfiguration(self):
         if self.compress is None:
@@ -252,6 +212,10 @@ class Freezer(object):
         :return: The script location
         """
 
+        # entry_point.attrs is tuple containing function
+        # entry_point.module_name is string representing module name
+        # entry_point.name is string representing script name
+
         # get toplevel packages of distribution from metadata
         def get_toplevel(dist):
             distribution = pkg_resources.get_distribution(dist)
@@ -282,18 +246,16 @@ class Freezer(object):
 
     # TODO: Bridge to Pyinstaller
     def _FreezeExecutable(self, executable):
-        parameters = {
-            'scripts':
-                'pathex':
-        'project_icon':
-        'project_name':
-        'hiddenimports':
-        'hookspath':
-        'runtime_hooks':
-        'excludes':
-        }
-
-        spec_contents = PYINSTALLER_SPEC_TEMPLATE.format(**parameters)
+        """
+        def run_makespec(scripts, name=None, onefile=None,
+                 console=True, debug=False, strip=False, noupx=False,
+                 pathex=None, version_file=None, specpath=None,
+                 datas=None, binaries=None, icon_file=None, manifest=None, resources=None, bundle_identifier=None,
+                 hiddenimports=None, hookspath=None, key=None, runtime_hooks=None,
+                 excludes=None, uac_admin=False, uac_uiaccess=False,
+                 win_no_prefer_redirects=False, win_private_assemblies=False,
+                 **kwargs):
+        """
         pass
 
     def Freeze(self):
@@ -309,6 +271,46 @@ class ConfigError(Exception):
     def __str__(self):
         return self.what
 
+
+class ConstantsModule(object):
+    def __init__(self, releaseString=None, copyright=None,
+                 moduleName="BUILD_CONSTANTS", timeFormat="%B %d, %Y %H:%M:%S"):
+        self.moduleName = moduleName
+        self.timeFormat = timeFormat
+        self.values = {}
+        self.values["BUILD_RELEASE_STRING"] = releaseString
+        self.values["BUILD_COPYRIGHT"] = copyright
+
+    def Create(self, finder):
+        """Create the module which consists of declaration statements for each
+           of the values."""
+        today = datetime.datetime.today()
+        sourceTimestamp = 0
+        for module in finder.modules:
+            if module.file is None:
+                continue
+            if module.inZipFile:
+                continue
+            if not os.path.exists(module.file):
+                raise ConfigError("no file named %s (for module %s)",
+                                  module.file, module.name)
+            timestamp = os.stat(module.file).st_mtime
+            sourceTimestamp = max(sourceTimestamp, timestamp)
+        sourceTimestamp = datetime.datetime.fromtimestamp(sourceTimestamp)
+        self.values["BUILD_TIMESTAMP"] = today.strftime(self.timeFormat)
+        self.values["BUILD_HOST"] = socket.gethostname().split(".")[0]
+        self.values["SOURCE_TIMESTAMP"] = \
+            sourceTimestamp.strftime(self.timeFormat)
+        module = finder._AddModule(self.moduleName)
+        sourceParts = []
+        names = list(self.values.keys())
+        names.sort()
+        for name in names:
+            value = self.values[name]
+            sourceParts.append("%s = %r" % (name, value))
+        source = "\n".join(sourceParts)
+        module.code = compile(source, "%s.py" % self.moduleName, "exec")
+        return module
 
 class VersionInfo(object):
     def __init__(self, version, internalName=None, originalFileName=None,

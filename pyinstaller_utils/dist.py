@@ -338,14 +338,17 @@ def setup(**attrs):
     commandClasses = attrs.setdefault("cmdclass", {})
     if sys.platform == "win32":
         if sys.version_info[:2] >= (2, 5):
-            _AddCommandClass(commandClasses, "bdist_msi", pyinstaller_utils.bdist_msi)
+            pass
+        #            _AddCommandClass(commandClasses, "bdist_msi", pyinstaller_utils.bdist_msi)
     elif sys.platform == "darwin":
-        _AddCommandClass(commandClasses, "bdist_dmg", pyinstaller_utils.bdist_dmg)
-        _AddCommandClass(commandClasses, "bdist_mac", pyinstaller_utils.bdist_mac)
+        pass
+    #        _AddCommandClass(commandClasses, "bdist_dmg", pyinstaller_utils.bdist_dmg)
+    #        _AddCommandClass(commandClasses, "bdist_mac", pyinstaller_utils.bdist_mac)
     else:
-        _AddCommandClass(commandClasses, "bdist_rpm", pyinstaller_utils.bdist_rpm)
+        pass
+    #        _AddCommandClass(commandClasses, "bdist_rpm", pyinstaller_utils.bdist_rpm)
     _AddCommandClass(commandClasses, "build", build)
     _AddCommandClass(commandClasses, "build_exe", build_exe)
-    _AddCommandClass(commandClasses, "install", install)
-    _AddCommandClass(commandClasses, "install_exe", install_exe)
+    #    _AddCommandClass(commandClasses, "install", install)
+    #    _AddCommandClass(commandClasses, "install_exe", install_exe)
     distutils.core.setup(**attrs)

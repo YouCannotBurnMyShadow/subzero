@@ -8,16 +8,14 @@ from PyInstaller.building.build_main import Analysis
 version = "5.0"
 __version__ = version
 
+from pyinstaller_utils.freezer import Freezer, ConstantsModule
+
 import sys
 
 if sys.platform == "win32":
     pass
 elif sys.platform == "darwin":
     pass
-
-del dist
-del finder
-del freezer
 
 def Entrypoint(dist, group, name,
                scripts=None, pathex=None, hiddenimports=None,
