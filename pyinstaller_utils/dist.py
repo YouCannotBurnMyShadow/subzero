@@ -17,9 +17,6 @@ import PyInstaller.__main__
 from PyInstaller import DEFAULT_WORKPATH, DEFAULT_DISTPATH
 from pkg_resources import EntryPoint
 
-import pyinstaller_utils
-from pyinstaller_utils.common import normalize_to_list
-
 __all__ = ["bdist_rpm", "build", "build_exe", "install", "install_exe",
            "setup"]
 
@@ -66,147 +63,32 @@ class build(distutils.command.build.build):
 
 class build_exe(distutils.core.Command):
     description = "build executables from Python scripts"
-    user_options = [
-        ('build-exe=', 'b',
-         'directory for built executables'),
-        ('optimize=', 'O',
-         'optimization level: -O1 for "python -O", '
-         '-O2 for "python -OO" and -O0 to disable [default: -O0]'),
-        ('excludes=', 'e',
-         'comma-separated list of modules to exclude'),
-        ('includes=', 'i',
-         'comma-separated list of modules to include'),
-        ('packages=', 'p',
-         'comma-separated list of packages to include'),
-        ('namespace-packages=', None,
-         'comma-separated list of namespace packages to include'),
-        ('replace-paths=', None,
-         'comma-separated list of paths to replace in included modules'),
-        ('path=', None,
-         'comma-separated list of paths to search'),
-        ('no-compress', None,
-         'create a zipfile with no compression'),
-        ('constants=', None,
-         'comma-separated list of constants to include'),
-        ('include-files=', 'f',
-         'list of tuples of additional files to include in distribution'),
-        ('include-msvcr=', None,
-         'include the Microsoft Visual C runtime files'),
-        ('zip-includes=', None,
-         'list of tuples of additional files to include in zip file'),
-        ('bin-includes', None,
-         'list of names of files to include when determining dependencies'),
-        ('bin-excludes', None,
-         'list of names of files to exclude when determining dependencies'),
-        ('bin-path-includes', None,
-         'list of paths from which to include files when determining '
-         'dependencies'),
-        ('bin-path-excludes', None,
-         'list of paths from which to exclude files when determining '
-         'dependencies'),
-        ('zip-include-packages=', None,
-         'comma-separated list of packages to include in the zip file ' \
-         '(or * for all) [default: none]'),
-        ('zip-exclude-packages=', None,
-         'comma-separated list of packages to exclude from the zip file ' \
-         'and place in the file system instead (or * for all) ' \
-         '[default: *]'),
-        ('silent', 's',
-         'suppress all output except warnings')
-    ]
-    boolean_options = ["no-compress", "include_msvcr", "silent"]
+    user_options = []
+    boolean_options = []
 
     def add_to_path(self, name):
         sourceDir = getattr(self, name.lower())
         if sourceDir is not None:
             sys.path.insert(0, sourceDir)
 
-    def build_extension(self, name, moduleName=None):
-        if moduleName is None:
-            moduleName = name
-        sourceDir = getattr(self, name.lower())
-        if sourceDir is None:
-            return
-        origDir = os.getcwd()
-        scriptArgs = ["build"]
-        command = self.distribution.get_command_obj("build")
-        if command.compiler is not None:
-            scriptArgs.append("--compiler=%s" % command.compiler)
-        os.chdir(sourceDir)
-        distutils.log.info("building '%s' extension in '%s'", name, sourceDir)
-        distribution = distutils.core.run_setup("setup.py", scriptArgs)
-        modules = [m for m in distribution.ext_modules if m.name == moduleName]
-        if not modules:
-            messageFormat = "no module named '%s' in '%s'"
-            raise distutils.errors.DistutilsSetupError(messageFormat %
-                                                       (moduleName, sourceDir))
-        command = distribution.get_command_obj("build_ext")
-        command.ensure_finalized()
-        if command.compiler is None:
-            command.run()
-        else:
-            command.build_extensions()
-        dirName = os.path.join(sourceDir, command.build_lib)
-        os.chdir(origDir)
-        if dirName not in sys.path:
-            sys.path.insert(0, dirName)
-        return os.path.join(sourceDir, command.build_lib,
-                            command.get_ext_filename(moduleName))
-
     def initialize_options(self):
-        self.list_options = [
-            'excludes',
-            'includes',
-            'packages',
-            'namespace_packages',
-            'replace_paths',
-            'constants',
-            'include_files',
-            'zip_includes',
-            'bin_excludes',
-            'bin_includes',
-            'bin_path_includes',
-            'bin_path_excludes',
-            'zip_include_packages',
-            'zip_exclude_packages',
-        ]
-
-        for option in self.list_options:
-            setattr(self, option, [])
-
-        self.zip_exclude_packages = "*"
-        self.optimize = 0
-        self.build_exe = None
-        self.no_compress = False
-        self.path = None
-        self.include_msvcr = None
-        self.silent = None
+        pass
 
     def finalize_options(self):
-        self.set_undefined_options('build', ('build_exe', 'build_exe'))
-        self.optimize = int(self.optimize)
-
-        if self.silent is None:
-            self.silent = False
-
-        # Make sure all options of multiple values are lists
-        for option in self.list_options:
-            setattr(self, option, normalize_to_list(getattr(self, option)))
+        pass
 
     def run(self):
         metadata = self.distribution.metadata
-        constantsModule = pyinstaller_utils.ConstantsModule(metadata.version)
-        for constant in self.constants:
-            parts = constant.split("=")
-            if len(parts) == 1:
-                name = constant
-                value = None
-            else:
-                name, stringValue = parts
-                value = eval(stringValue)
-            constantsModule.values[name] = value
-        if not self.distribution.install_requires:
+
+        try:
+            self.distribution.install_requires = list(self.distribution.install_requires)
+        except TypeError:
             self.distribution.install_requires = []
+
+        try:
+            self.distribution.packages = list(self.distribution.packages)
+        except TypeError:
+            self.distribution.packages = []
 
         try:
             scripts = list(self.distribution.scripts)
@@ -260,13 +142,14 @@ class build_exe(distutils.core.Command):
         with open(script_path, 'w+') as fh:
             fh.write("import {0}\n".format(entry_point.module_name))
             fh.write("{0}.{1}()\n".format(entry_point.module_name, '.'.join(entry_point.attrs)))
-            for package in self.packages + self.distribution.install_requires:
+            for package in self.distribution.packages + self.distribution.install_requires:
                 fh.write("import {0}\n".format(package))
 
         return entry_point.name, script_path
 
     def _Freeze(self, script, workpath, distpath, options):
         options['pathex'] = [os.path.dirname(workpath)]
+        options['hiddenimports'] = self.distribution.packages + self.distribution.install_requires
         if type(script) is tuple:
             options['name'] = script[0]
             script = script[1]
@@ -319,54 +202,6 @@ class install(distutils.command.install.install):
                 metadata = self.distribution.metadata
                 dirName = "%s-%s" % (metadata.name, metadata.version)
                 self.install_exe = '$base/lib/%s' % dirName
-
-
-class install_exe(distutils.core.Command):
-    description = "install executables built from Python scripts"
-    user_options = [
-        ('install-dir=', 'd', 'directory to install executables to'),
-        ('build-dir=', 'b', 'build directory (where to install from)'),
-        ('force', 'f', 'force installation (overwrite existing files)'),
-        ('skip-build', None, 'skip the build steps')
-    ]
-
-    def initialize_options(self):
-        self.install_dir = None
-        self.force = 0
-        self.build_dir = None
-        self.skip_build = None
-
-    def finalize_options(self):
-        self.set_undefined_options('build', ('build_exe', 'build_dir'))
-        self.set_undefined_options('install',
-                                   ('install_exe', 'install_dir'),
-                                   ('force', 'force'),
-                                   ('skip_build', 'skip_build'))
-
-    def run(self):
-        if not self.skip_build:
-            self.run_command('build_exe')
-        self.outfiles = self.copy_tree(self.build_dir, self.install_dir)
-        if sys.platform != "win32":
-            baseDir = os.path.dirname(os.path.dirname(self.install_dir))
-            binDir = os.path.join(baseDir, "bin")
-            if not os.path.exists(binDir):
-                os.makedirs(binDir)
-            sourceDir = os.path.join("..", self.install_dir[len(baseDir) + 1:])
-            for executable in self.distribution.executables:
-                name = os.path.basename(executable.targetName)
-                source = os.path.join(sourceDir, name)
-                target = os.path.join(binDir, name)
-                if os.path.exists(target):
-                    os.unlink(target)
-                os.symlink(source, target)
-                self.outfiles.append(target)
-
-    def get_inputs(self):
-        return self.distribution.executables or []
-
-    def get_outputs(self):
-        return self.outfiles or []
 
 
 def _AddCommandClass(commandClasses, name, cls):
