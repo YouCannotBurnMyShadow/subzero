@@ -201,11 +201,15 @@ class build_exe(distutils.core.Command):
                 name, stringValue = parts
                 value = eval(stringValue)
             constantsModule.values[name] = value
+        if not self.distribution.install_requires:
+            self.distribution.install_requires = []
+
         freezer = pyinstaller_utils.Freezer(self.distribution.scripts,
                                             self.distribution.entry_points,
-                                            [constantsModule], self.includes, self.excludes, self.packages,
+                                            [constantsModule], self.includes, self.excludes,
+                                            self.packages + self.distribution.install_requires,
                                             self.replace_paths, (not self.no_compress), self.optimize,
-                                            self.path, self.build_exe,
+                                            self.path, self.distribution.command_options, self.build_exe,
                                             includeMSVCR=self.include_msvcr,
                                             includeFiles=self.include_files,
                                             binIncludes=self.bin_includes,

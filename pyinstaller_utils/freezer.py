@@ -10,6 +10,8 @@ import distutils.sysconfig
 import os
 import sys
 
+import PyInstaller.__main__
+from PyInstaller import DEFAULT_WORKPATH, DEFAULT_DISTPATH
 from pkg_resources import EntryPoint
 
 import pyinstaller_utils
@@ -108,18 +110,31 @@ def get_resource_file_path(dirName, name, ext):
 class Freezer(object):
     def __init__(self, scripts, entry_points, constantsModules=[], includes=[],
                  excludes=[], packages=[], replacePaths=[], compress=True,
-                 optimizeFlag=0, path=None,
+                 optimizeFlag=0, path=None, options=[],
                  targetDir=None, binIncludes=[], binExcludes=[],
                  binPathIncludes=[], binPathExcludes=[],
                  includeFiles=[], zipIncludes=[], silent=False,
                  namespacePackages=[], metadata=None,
                  includeMSVCR=False, zipIncludePackages=[],
                  zipExcludePackages=["*"]):
-        self.scripts = list(scripts) if scripts else []
+        # TODO: Understand why this varible is present
+        targetDir = None
+        distDir = None
+
         try:
-            self.entry_points = EntryPoint.parse_map(entry_points)['console_scripts'] if entry_points else []
+            self.scripts = list(scripts)
+        except TypeError:
+            self.scripts = []
+        try:
+            self.entry_points = EntryPoint.parse_map(entry_points)['console_scripts']
         except KeyError:
             self.entry_points = []
+        try:
+            self.options = {}
+            for key, value in dict(options['PyInstaller']).items():
+                self.options[key] = value[1]
+        except (KeyError, TypeError):
+            self.options = {}
         self.constantsModules = list(constantsModules)
         self.includes = list(includes)
         self.excludes = list(excludes)
@@ -131,6 +146,7 @@ class Freezer(object):
         self.path = path
         self.includeMSVCR = includeMSVCR
         self.targetDir = targetDir
+        self.distDir = distDir
         self.binIncludes = [os.path.normcase(n) \
                             for n in self._GetDefaultBinIncludes() + binIncludes]
         self.binExcludes = [os.path.normcase(n) \
@@ -180,7 +196,9 @@ class Freezer(object):
         if self.compress is None:
             self.compress = True
         if self.targetDir is None:
-            self.targetDir = os.path.abspath("dist")
+            self.targetDir = DEFAULT_WORKPATH
+        if self.distDir is None:
+            self.distDir = DEFAULT_DISTPATH
         if self.path is None:
             self.path = sys.path
 
@@ -202,9 +220,6 @@ class Freezer(object):
                 raise ConfigError("package %s cannot be both included and " \
                                   "excluded from zip file", name)
 
-        for executable in self.executables:
-            executable._VerifyConfiguration(self)
-
     def _GenerateScript(self, entry_point):
         """
         Generates a script given an entry point.
@@ -216,53 +231,29 @@ class Freezer(object):
         # entry_point.module_name is string representing module name
         # entry_point.name is string representing script name
 
-        # get toplevel packages of distribution from metadata
-        def get_toplevel(dist):
-            distribution = pkg_resources.get_distribution(dist)
-            if distribution.has_metadata('top_level.txt'):
-                return list(distribution.get_metadata('top_level.txt').split())
-            else:
-                return []
-
-        packages = hiddenimports or []
-        for distribution in hiddenimports:
-            packages += get_toplevel(distribution)
-
-        scripts = scripts or []
-        pathex = pathex or []
-        # get the entry point
-        ep = pkg_resources.get_entry_info(dist, group, name)
-        # insert path of the egg at the verify front of the search path
-        pathex = [ep.dist.location] + pathex
         # script name must not be a valid module name to avoid name clashes on import
-        script_path = os.path.join(DEFAULT_WORKPATH, name + '-script.py')
+        script_path = os.path.join(self.targetDir, '{}-script.py'.format(entry_point.name))
         with open(script_path, 'w') as fh:
-            fh.write("import {0}\n".format(ep.module_name))
-            fh.write("{0}.{1}()\n".format(ep.module_name, '.'.join(ep.attrs)))
-            for package in packages:
+            fh.write("import {0}\n".format(entry_point.module_name))
+            fh.write("{0}.{1}()\n".format(entry_point.module_name, '.'.join(entry_point.attrs)))
+            for package in self.packages:
                 fh.write("import {0}\n".format(package))
 
         return script_path
 
-    # TODO: Bridge to Pyinstaller
-    def _FreezeExecutable(self, executable):
-        """
-        def run_makespec(scripts, name=None, onefile=None,
-                 console=True, debug=False, strip=False, noupx=False,
-                 pathex=None, version_file=None, specpath=None,
-                 datas=None, binaries=None, icon_file=None, manifest=None, resources=None, bundle_identifier=None,
-                 hiddenimports=None, hookspath=None, key=None, runtime_hooks=None,
-                 excludes=None, uac_admin=False, uac_uiaccess=False,
-                 win_no_prefer_redirects=False, win_private_assemblies=False,
-                 **kwargs):
-        """
-        pass
+    def _Freeze(self):
+        self.options['pathex'] = [os.path.dirname(self.targetDir)]
+
+        PyInstaller.__main__.run_build(None, PyInstaller.__main__.run_makespec(self.scripts, **self.options),
+                                       noconfirm=True, workpath=self.targetDir, distpath=self.distDir)
 
     def Freeze(self):
-        for entry_point in self.entry_points:
+        os.makedirs(self.targetDir)
+
+        for entry_point in self.entry_points.values():
             self.scripts.append(self._GenerateScript(entry_point))
-        for script in self.scripts:
-            self._FreezeExecutable(script)
+
+        self._Freeze()
 
 class ConfigError(Exception):
     def __init__(self, format, *args):

@@ -10,4 +10,11 @@ setup(name='hello_world',
               'my_project = hello_world.__main__:main'
           ]
       },
-      )
+      options={
+          'PyInstaller': {
+              'hiddenimports': [],
+          }
+      },
+      install_requires=[
+          'requests'
+      ])
