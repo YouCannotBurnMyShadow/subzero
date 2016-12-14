@@ -7,7 +7,8 @@ setup(name='hello_world',
       packages=find_packages(),
       entry_points={
           'console_scripts': [
-              'my_project = hello_world.__main__:main'
+              'my_project = hello_world.__main__:main',
+              'gui = hello_world.__main__:gui',
           ]
       },
       options={

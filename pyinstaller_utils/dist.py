@@ -228,7 +228,8 @@ class build_exe(distutils.core.Command):
         for entry_point in entry_points.values():
             scripts.append(self._GenerateScript(entry_point, DEFAULT_WORKPATH))
 
-        self._Freeze(scripts, DEFAULT_WORKPATH, DEFAULT_DISTPATH, py_options)
+        for script in scripts:
+            self._Freeze(script, DEFAULT_WORKPATH, DEFAULT_DISTPATH, py_options)
 
     def set_source_location(self, name, *pathParts):
         envName = "%s_BASE" % name.upper()
@@ -262,12 +263,15 @@ class build_exe(distutils.core.Command):
             for package in self.packages + self.distribution.install_requires:
                 fh.write("import {0}\n".format(package))
 
-        return script_path
+        return entry_point.name, script_path
 
-    def _Freeze(self, scripts, workpath, distpath, options):
+    def _Freeze(self, script, workpath, distpath, options):
         options['pathex'] = [os.path.dirname(workpath)]
+        if type(script) is tuple:
+            options['name'] = script[0]
+            script = script[1]
 
-        PyInstaller.__main__.run_build(None, PyInstaller.__main__.run_makespec(scripts, **options),
+        PyInstaller.__main__.run_build(None, PyInstaller.__main__.run_makespec([script], **options),
                                        noconfirm=True, workpath=workpath, distpath=distpath)
 
 class install(distutils.command.install.install):
