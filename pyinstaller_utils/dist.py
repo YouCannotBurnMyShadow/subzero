@@ -13,6 +13,10 @@ import distutils.version
 import os
 import sys
 
+import PyInstaller.__main__
+from PyInstaller import DEFAULT_WORKPATH, DEFAULT_DISTPATH
+from pkg_resources import EntryPoint
+
 import pyinstaller_utils
 from pyinstaller_utils.common import normalize_to_list
 
@@ -204,25 +208,27 @@ class build_exe(distutils.core.Command):
         if not self.distribution.install_requires:
             self.distribution.install_requires = []
 
-        freezer = pyinstaller_utils.Freezer(self.distribution.scripts,
-                                            self.distribution.entry_points,
-                                            [constantsModule], self.includes, self.excludes,
-                                            self.packages + self.distribution.install_requires,
-                                            self.replace_paths, (not self.no_compress), self.optimize,
-                                            self.path, self.distribution.command_options, self.build_exe,
-                                            includeMSVCR=self.include_msvcr,
-                                            includeFiles=self.include_files,
-                                            binIncludes=self.bin_includes,
-                                            binExcludes=self.bin_excludes,
-                                            zipIncludes=self.zip_includes,
-                                            silent=self.silent,
-                                            namespacePackages=self.namespace_packages,
-                                            binPathIncludes=self.bin_path_includes,
-                                            binPathExcludes=self.bin_path_excludes,
-                                            metadata=metadata,
-                                            zipIncludePackages=self.zip_include_packages,
-                                            zipExcludePackages=self.zip_exclude_packages)
-        freezer.Freeze()
+        try:
+            scripts = list(self.distribution.scripts)
+        except TypeError:
+            scripts = []
+        try:
+            entry_points = EntryPoint.parse_map(self.distribution.entry_points)['console_scripts']
+        except KeyError:
+            entry_points = []
+        try:
+            py_options = {}
+            for key, value in dict(self.distribution.command_options['PyInstaller']).items():
+                py_options[key] = value[1]
+        except (KeyError, TypeError):
+            py_options = {}
+
+        os.makedirs(DEFAULT_WORKPATH, exist_ok=True)
+
+        for entry_point in entry_points.values():
+            scripts.append(self._GenerateScript(entry_point, DEFAULT_WORKPATH))
+
+        self._Freeze(scripts, DEFAULT_WORKPATH, DEFAULT_DISTPATH, py_options)
 
     def set_source_location(self, name, *pathParts):
         envName = "%s_BASE" % name.upper()
@@ -236,6 +242,33 @@ class build_exe(distutils.core.Command):
             if os.path.isdir(sourceDir):
                 setattr(self, attrName, sourceDir)
 
+    def _GenerateScript(self, entry_point, workpath):
+        """
+        Generates a script given an entry point.
+        :param entry_point:
+        :param workpath:
+        :return: The script location
+        """
+
+        # entry_point.attrs is tuple containing function
+        # entry_point.module_name is string representing module name
+        # entry_point.name is string representing script name
+
+        # script name must not be a valid module name to avoid name clashes on import
+        script_path = os.path.join(workpath, '{}-script.py'.format(entry_point.name))
+        with open(script_path, 'w+') as fh:
+            fh.write("import {0}\n".format(entry_point.module_name))
+            fh.write("{0}.{1}()\n".format(entry_point.module_name, '.'.join(entry_point.attrs)))
+            for package in self.packages + self.distribution.install_requires:
+                fh.write("import {0}\n".format(package))
+
+        return script_path
+
+    def _Freeze(self, scripts, workpath, distpath, options):
+        options['pathex'] = [os.path.dirname(workpath)]
+
+        PyInstaller.__main__.run_build(None, PyInstaller.__main__.run_makespec(scripts, **options),
+                                       noconfirm=True, workpath=workpath, distpath=distpath)
 
 class install(distutils.command.install.install):
     user_options = distutils.command.install.install.user_options + [
