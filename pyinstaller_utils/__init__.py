@@ -8,7 +8,7 @@ from PyInstaller.building.build_main import Analysis
 version = "5.0"
 __version__ = version
 
-from pyinstaller_utils.freezer import Freezer, ConstantsModule
+# from pyinstaller_utils.freezer import Freezer, ConstantsModule
 
 import sys
 
