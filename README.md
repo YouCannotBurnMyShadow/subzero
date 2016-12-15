@@ -3,7 +3,9 @@ PyInstaller Utils allows you to build your PyInstaller executables from setup.py
 
 ## How do I install it?
 
-  pip install pyinstaller_utils
+```
+pip install pyinstaller_utils
+```
 
 ## How do I use it?
 
