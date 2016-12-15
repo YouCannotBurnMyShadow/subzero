@@ -9,18 +9,23 @@ PyInstaller Utils allows you to build your PyInstaller executables from setup.py
 
 In your setup file, replace the default setup import with the followng:
 
-  from pyinstaller_utils.dist import setup
-  
+```python
+from pyinstaller_utils.dist import setup
+```
+
 Then run the following command:
 
-  python setup.py build_exe
-  
+```
+python setup.py build_exe
+```
+
 That's it! PyInstaller will build all of the entry points and scripts specified in your executable.
 
 ## How do I specify options?
 
 In your setup function, you can specify PyInstaller options as follows:
-  
+
+```python
   setup(...
   options={
           'PyInstaller': {
@@ -30,5 +35,5 @@ In your setup function, you can specify PyInstaller options as follows:
           }
       },
   ...)
-  
-  The full array of options is of course available in the PyInstaller documentation.
+```
+The full array of options is of course available in the PyInstaller documentation.
