@@ -103,8 +103,8 @@ class build_exe(distutils.core.Command):
         return entry_point.name, script_path
 
     def _Freeze(self, script, workpath, distpath, options):
-        options['pathex'] = [os.path.dirname(workpath)]
-        options['hiddenimports'] = self.distribution.packages + self.distribution.install_requires
+        options.setdefault('pathex',[]).append(os.path.dirname(workpath))
+        options.setdefault('hiddenimports',[]).extend(self.distribution.packages + self.distribution.install_requires)
         if type(script) is tuple:
             options['name'] = script[0]
             script = script[1]
