@@ -17,48 +17,14 @@ import PyInstaller.__main__
 from PyInstaller import DEFAULT_WORKPATH, DEFAULT_DISTPATH
 from pkg_resources import EntryPoint
 
-__all__ = ["bdist_rpm", "build", "build_exe", "install", "install_exe",
-           "setup"]
+USE_DISTUTILS = False
 
+try:
+    import setuptools
+except ImportError:
+    USE_DISTUTILS = True
 
-class Distribution(distutils.dist.Distribution):
-    def __init__(self, attrs):
-        self.executables = []
-        distutils.dist.Distribution.__init__(self, attrs)
-
-
-class bdist_rpm(distutils.command.bdist_rpm.bdist_rpm):
-    def finalize_options(self):
-        distutils.command.bdist_rpm.bdist_rpm.finalize_options(self)
-        self.use_rpm_opt_flags = 1
-
-    def _make_spec_file(self):
-        contents = distutils.command.bdist_rpm.bdist_rpm._make_spec_file(self)
-        contents.append('%define __prelink_undo_cmd %{nil}')
-        return [c for c in contents if c != 'BuildArch: noarch']
-
-
-class build(distutils.command.build.build):
-    user_options = distutils.command.build.build.user_options + [
-        ('build-exe=', None, 'build directory for executables')
-    ]
-
-    def get_sub_commands(self):
-        subCommands = distutils.command.build.build.get_sub_commands(self)
-        if self.distribution.executables:
-            subCommands.append("build_exe")
-        return subCommands
-
-    def initialize_options(self):
-        distutils.command.build.build.initialize_options(self)
-        self.build_exe = None
-
-    def finalize_options(self):
-        distutils.command.build.build.finalize_options(self)
-        if self.build_exe is None:
-            dirName = "exe.%s-%s" % \
-                      (distutils.util.get_platform(), sys.version[0:3])
-            self.build_exe = os.path.join(self.build_base, dirName)
+__all__ = ["build_exe", "setup"]
 
 
 class build_exe(distutils.core.Command):
@@ -157,74 +123,15 @@ class build_exe(distutils.core.Command):
         PyInstaller.__main__.run_build(None, PyInstaller.__main__.run_makespec([script], **options),
                                        noconfirm=True, workpath=workpath, distpath=distpath)
 
-class install(distutils.command.install.install):
-    user_options = distutils.command.install.install.user_options + [
-        ('install-exe=', None,
-         'installation directory for executables')
-    ]
-
-    def expand_dirs(self):
-        distutils.command.install.install.expand_dirs(self)
-        self._expand_attrs(['install_exe'])
-
-    def get_sub_commands(self):
-        subCommands = distutils.command.install.install.get_sub_commands(self)
-        if self.distribution.executables:
-            subCommands.append("install_exe")
-        return [s for s in subCommands if s != "install_egg_info"]
-
-    def initialize_options(self):
-        distutils.command.install.install.initialize_options(self)
-        self.install_exe = None
-
-    def finalize_options(self):
-        if self.prefix is None and sys.platform == "win32":
-            try:
-                import winreg
-            except:
-                import _winreg as winreg
-            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
-                                 r"Software\Microsoft\Windows\CurrentVersion")
-            prefix = str(winreg.QueryValueEx(key, "ProgramFilesDir")[0])
-            metadata = self.distribution.metadata
-            self.prefix = "%s/%s" % (prefix, metadata.name)
-        distutils.command.install.install.finalize_options(self)
-        self.convert_paths('exe')
-        if self.root is not None:
-            self.change_roots('exe')
-
-    def select_scheme(self, name):
-        distutils.command.install.install.select_scheme(self, name)
-        if self.install_exe is None:
-            if sys.platform == "win32":
-                self.install_exe = '$base'
-            else:
-                metadata = self.distribution.metadata
-                dirName = "%s-%s" % (metadata.name, metadata.version)
-                self.install_exe = '$base/lib/%s' % dirName
-
-
 def _AddCommandClass(commandClasses, name, cls):
     if name not in commandClasses:
         commandClasses[name] = cls
 
-
 def setup(**attrs):
-    attrs.setdefault("distclass", Distribution)
+    # attrs.setdefault("distclass", Distribution)
     commandClasses = attrs.setdefault("cmdclass", {})
-    if sys.platform == "win32":
-        if sys.version_info[:2] >= (2, 5):
-            pass
-        #            _AddCommandClass(commandClasses, "bdist_msi", pyinstaller_utils.bdist_msi)
-    elif sys.platform == "darwin":
-        pass
-    #        _AddCommandClass(commandClasses, "bdist_dmg", pyinstaller_utils.bdist_dmg)
-    #        _AddCommandClass(commandClasses, "bdist_mac", pyinstaller_utils.bdist_mac)
-    else:
-        pass
-    #        _AddCommandClass(commandClasses, "bdist_rpm", pyinstaller_utils.bdist_rpm)
-    _AddCommandClass(commandClasses, "build", build)
     _AddCommandClass(commandClasses, "build_exe", build_exe)
-    #    _AddCommandClass(commandClasses, "install", install)
-    #    _AddCommandClass(commandClasses, "install_exe", install_exe)
-    distutils.core.setup(**attrs)
+    if USE_DISTUTILS:
+        distutils.core.setup(**attrs)
+    else:
+        setuptools.setup(**attrs)
