@@ -1,5 +1,5 @@
 # pyinstaller_utils
-PyInstaller Utils allows you to build your PyInstaller executables from setup.py. 
+PyInstaller Utils allows you to build your PyInstaller executables from setup.py (and coming soon: create nice MSI installers to distribute them). 
 
 ## How do I install it?
 
