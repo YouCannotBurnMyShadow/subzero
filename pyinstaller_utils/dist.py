@@ -1,14 +1,5 @@
 # This file was originally taken from cx_Freeze by Anthony Tuininga, and is licensed under the  PSF license.
 
-import distutils.command.bdist_rpm
-import distutils.command.build
-import distutils.command.install
-import distutils.core
-import distutils.dir_util
-import distutils.dist
-import distutils.errors
-import distutils.log
-import distutils.util
 import distutils.version
 import os
 import sys
@@ -17,12 +8,10 @@ import PyInstaller.__main__
 from PyInstaller import DEFAULT_WORKPATH, DEFAULT_DISTPATH
 from pkg_resources import EntryPoint
 
-USE_DISTUTILS = False
-
 try:
-    import setuptools
+    from distutils.core import setup as distutils_setup
 except ImportError:
-    USE_DISTUTILS = True
+    from setuptools import setup as distutils_setup
 
 __all__ = ["build_exe", "setup"]
 
@@ -131,7 +120,4 @@ def setup(**attrs):
     # attrs.setdefault("distclass", Distribution)
     commandClasses = attrs.setdefault("cmdclass", {})
     _AddCommandClass(commandClasses, "build_exe", build_exe)
-    if USE_DISTUTILS:
-        distutils.core.setup(**attrs)
-    else:
-        setuptools.setup(**attrs)
+    distutils_setup(**attrs)
