@@ -3,6 +3,7 @@
 import distutils.command.build
 import distutils.version
 import inspect
+import ntpath
 import os
 import shutil
 import sys
@@ -112,21 +113,19 @@ class build_exe(distutils.core.Command):
         # entry_point.name is string representing script name
 
         # script name must not be a valid module name to avoid name clashes on import
-        script_path = os.path.join(workpath, '{}-script.py'.format(entry_point.name))
+        script_path = os.path.join(workpath, '{}.py'.format(entry_point.name))
         with open(script_path, 'w+') as fh:
             fh.write("import {0}\n".format(entry_point.module_name))
             fh.write("{0}.{1}()\n".format(entry_point.module_name, '.'.join(entry_point.attrs)))
             for package in self.distribution.packages + self.distribution.install_requires:
                 fh.write("import {0}\n".format(package))
 
-        return entry_point.name, script_path
+        return script_path
 
     def _Freeze(self, script, workpath, distpath, options):
         options.setdefault('pathex',[]).append(os.path.dirname(workpath))
         options.setdefault('hiddenimports',[]).extend(self.distribution.packages + self.distribution.install_requires)
-        if type(script) is tuple:
-            options['name'] = script[0]
-            script = script[1]
+        options['name'] = '.'.join(ntpath.basename(script).split('.')[:-1])
 
         spec_file = PyInstaller.__main__.run_makespec([script], **options)
         PyInstaller.__main__.run_build(None, spec_file, noconfirm=True, workpath=workpath, distpath=distpath)
