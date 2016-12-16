@@ -1,11 +1,14 @@
 # This file was originally taken from cx_Freeze by Anthony Tuininga, and is licensed under the  PSF license.
 
+import distutils.command.build
 import distutils.version
+import inspect
 import os
+import shutil
 import sys
 
 import PyInstaller.__main__
-from PyInstaller import DEFAULT_WORKPATH, DEFAULT_DISTPATH
+from PyInstaller.building.makespec import main as makespec_main
 from pkg_resources import EntryPoint
 
 from pyinstaller_utils.windist import bdist_msi
@@ -22,6 +25,9 @@ class build_exe(distutils.core.Command):
     description = "build executables from Python scripts"
     user_options = []
     boolean_options = []
+    _excluded_args = [
+        'scripts',
+    ]
 
     def add_to_path(self, name):
         sourceDir = getattr(self, name.lower())
@@ -29,10 +35,19 @@ class build_exe(distutils.core.Command):
             sys.path.insert(0, sourceDir)
 
     def initialize_options(self):
-        pass
+        distutils.command.build.build.initialize_options(self)
+        self.build_exe = None
+
+        for name, parameter in inspect.signature(makespec_main).parameters.items():
+            if name not in (self._excluded_args + ['args', 'kwargs']) and not getattr(self, name, None):
+                setattr(self, name, None)
 
     def finalize_options(self):
-        pass
+        distutils.command.build.build.finalize_options(self)
+        if self.build_exe is None:
+            dirName = "exe.%s-%s" % \
+                      (distutils.util.get_platform(), sys.version[0:3])
+            self.build_exe = os.path.join(self.build_base, dirName)
 
     def run(self):
         metadata = self.distribution.metadata
@@ -57,18 +72,20 @@ class build_exe(distutils.core.Command):
             entry_points = []
         try:
             py_options = {}
-            for key, value in dict(self.distribution.command_options['PyInstaller']).items():
+            for key, value in dict(self.distribution.command_options['build_exe']).items():
                 py_options[key] = value[1]
         except (KeyError, TypeError):
             py_options = {}
 
-        os.makedirs(DEFAULT_WORKPATH, exist_ok=True)
+        os.makedirs(self.build_temp, exist_ok=True)
 
         for entry_point in entry_points.values():
-            scripts.append(self._GenerateScript(entry_point, DEFAULT_WORKPATH))
+            scripts.append(self._GenerateScript(entry_point, self.build_temp))
 
         for script in scripts:
-            self._Freeze(script, DEFAULT_WORKPATH, DEFAULT_DISTPATH, py_options)
+            self._Freeze(script, self.build_temp, self.build_exe, py_options)
+
+        shutil.rmtree(self.build_temp, ignore_errors=True)
 
     def set_source_location(self, name, *pathParts):
         envName = "%s_BASE" % name.upper()
@@ -111,8 +128,9 @@ class build_exe(distutils.core.Command):
             options['name'] = script[0]
             script = script[1]
 
-        PyInstaller.__main__.run_build(None, PyInstaller.__main__.run_makespec([script], **options),
-                                       noconfirm=True, workpath=workpath, distpath=distpath)
+        spec_file = PyInstaller.__main__.run_makespec([script], **options)
+        PyInstaller.__main__.run_build(None, spec_file, noconfirm=True, workpath=workpath, distpath=distpath)
+        os.remove(spec_file)
 
 def _AddCommandClass(commandClasses, name, cls):
     if name not in commandClasses:

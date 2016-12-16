@@ -26,7 +26,7 @@ In your setup function, you can specify PyInstaller options as follows:
 ```python
   setup(...
   options={
-          'PyInstaller': {
+          'build_exe': {
               'hiddenimports': ['requests'],
               'pathex': ['/my/path', '/their/path'],
               'icon': '/path/to/icon.png',

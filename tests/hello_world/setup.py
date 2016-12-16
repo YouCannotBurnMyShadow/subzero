@@ -12,10 +12,8 @@ setup(name='hello_world',
           ]
       },
       options={
-          'PyInstaller': {
+          'build_exe': {
               'hiddenimports': [],
           }
       },
-      install_requires=[
-          'requests'
-      ])
+      install_requires=[])

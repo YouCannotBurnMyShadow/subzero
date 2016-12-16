@@ -51,6 +51,7 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                           "Installed and not Resume and not Preselected", 1250),
                          ("ProgressDlg", None, 1280)
                          ])
+        '''
         for index, executable in enumerate(self.distribution.executables):
             if executable.shortcutName is not None \
                     and executable.shortcutDir is not None:
@@ -60,6 +61,7 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                                   executable.shortcutName, "TARGETDIR",
                                   "[TARGETDIR]%s" % baseName, None, None, None,
                                   None, None, None, None)])
+        '''
         for tableName, data in self.data.items():
             msilib.add_data(self.db, tableName, data)
 
