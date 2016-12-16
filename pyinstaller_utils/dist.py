@@ -8,6 +8,8 @@ import PyInstaller.__main__
 from PyInstaller import DEFAULT_WORKPATH, DEFAULT_DISTPATH
 from pkg_resources import EntryPoint
 
+from pyinstaller_utils.windist import bdist_msi
+
 try:
     from distutils.core import setup as distutils_setup
 except ImportError:
@@ -117,7 +119,9 @@ def _AddCommandClass(commandClasses, name, cls):
         commandClasses[name] = cls
 
 def setup(**attrs):
-    # attrs.setdefault("distclass", Distribution)
     commandClasses = attrs.setdefault("cmdclass", {})
+    if sys.platform == "win32":
+        if sys.version_info[:2] >= (2, 5):
+            _AddCommandClass(commandClasses, "bdist_msi", bdist_msi)
     _AddCommandClass(commandClasses, "build_exe", build_exe)
     distutils_setup(**attrs)

@@ -25,5 +25,5 @@ setup(
     platforms='any',
     keywords=['pyinstaller'],
     classifiers=[],
-    install_requires=['pyinstaller'],
+    install_requires=['pyinstaller', 'jinja2'],
     )
