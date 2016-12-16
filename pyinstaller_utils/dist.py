@@ -83,10 +83,21 @@ class build_exe(distutils.core.Command):
         for entry_point in entry_points.values():
             scripts.append(self._GenerateScript(entry_point, self.build_temp))
 
+        names = []
         for script in scripts:
-            self._Freeze(script, self.build_temp, self.build_exe, py_options)
+            names.append(self._Freeze(script, self.build_temp, self.build_exe, py_options))
+
+        for name in names:
+            if name != names[0]:
+                self.moveTree(os.path.join(self.build_exe, name), os.path.join(self.build_exe, names[0]))
+
+        self.moveTree(os.path.join(self.build_exe, names[0]), self.build_exe)
 
         shutil.rmtree(self.build_temp, ignore_errors=True)
+
+        # TODO: Compare file hashes to make sure we haven't replaced files with a different version
+        for name in names:
+            shutil.rmtree(os.path.join(self.build_exe, name), ignore_errors=True)
 
     def set_source_location(self, name, *pathParts):
         envName = "%s_BASE" % name.upper()
@@ -99,6 +110,29 @@ class build_exe(distutils.core.Command):
             sourceDir = os.path.join(baseDir, *pathParts)
             if os.path.isdir(sourceDir):
                 setattr(self, attrName, sourceDir)
+
+    def moveTree(self, sourceRoot, destRoot):
+        if not os.path.exists(destRoot):
+            return False
+        ok = True
+        for path, dirs, files in os.walk(sourceRoot):
+            relPath = os.path.relpath(path, sourceRoot)
+            destPath = os.path.join(destRoot, relPath)
+            if not os.path.exists(destPath):
+                os.makedirs(destPath)
+            for file in files:
+                destFile = os.path.join(destPath, file)
+                if os.path.isfile(destFile):
+                    print("Skipping existing file: {}".format(os.path.join(relPath, file)))
+                    ok = False
+                    continue
+                srcFile = os.path.join(path, file)
+                # print "rename", srcFile, destFile
+                os.rename(srcFile, destFile)
+        for path, dirs, files in os.walk(sourceRoot, False):
+            if len(files) == 0 and len(dirs) == 0:
+                os.rmdir(path)
+        return ok
 
     def _GenerateScript(self, entry_point, workpath):
         """
@@ -130,6 +164,8 @@ class build_exe(distutils.core.Command):
         spec_file = PyInstaller.__main__.run_makespec([script], **options)
         PyInstaller.__main__.run_build(None, spec_file, noconfirm=True, workpath=workpath, distpath=distpath)
         os.remove(spec_file)
+
+        return options['name']
 
 def _AddCommandClass(commandClasses, name, cls):
     if name not in commandClasses:
