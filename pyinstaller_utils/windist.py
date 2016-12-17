@@ -51,7 +51,7 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         msilib.add_data(self.db, 'InstallUISequence',
                         [("PrepareDlg", None, 140),
                          ("A_SET_TARGET_DIR", 'TARGETDIR=""', 401),
-                         ("SelectDirectoryDlg", "not Installed", 1230),
+                         ("LicenseDlg", "not Installed", 1230),
                          ("MaintenanceTypeDlg",
                           "Installed and not Resume and not Preselected", 1250),
                          ("ProgressDlg", None, 1280)
@@ -257,7 +257,29 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         msilib.add_data(self.db, 'Property', props)
 
     def add_select_directory_dialog(self):
-        pass
+        dialog = distutils.command.bdist_msi.PyDialog(self.db, "LicenseDlg",
+                                                      self.x, self.y, self.width, self.height, self.modal,
+                                                      self.title, "Next", "Next", "Cancel", bitmap=False)
+
+        dialog.title("License Agreement")
+
+        LICENSE_TEXT = r'''
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1033{\fonttbl{\f0\fnil\fcharset0 Calibri;}}
+{\*\generator Riched20 10.0.14393}\viewkind4\uc1
+\pard\sa200\sl276\slmult1\f0\fs22\lang9 test\par
+}'''
+
+        dialog.control("ScrollableText", "ScrollableText", 15, 30, 306, 200, 3, None, LICENSE_TEXT, None, None)
+
+        dialog.back("< Back", "Next", active=False)
+
+        button = dialog.next("Next >", "Cancel")
+        button.event("SetTargetPath", "TARGETDIR", ordering=1)
+        button.event("SpawnWaitDialog", "WaitForCostingDlg", ordering=2)
+        button.event("EndDialog", "Return", ordering=3)
+
+        button = dialog.cancel("Cancel", "Back")
+        button.event("SpawnDialog", "CancelDlg")
 
     def add_text_styles(self):
         msilib.add_data(self.db, 'TextStyle',
@@ -369,7 +391,7 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         self.shortcuts = None
 
     def run(self):
-        # self.skip_build = True
+        self.skip_build = True
         if not self.skip_build:
             self.run_command('build_exe')
         '''
