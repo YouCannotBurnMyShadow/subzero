@@ -245,7 +245,8 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
             ('Progress1', 'Install'),
             ('Progress2', 'installs'),
             ('MaintenanceForm_Action', 'Repair'),
-            ('ALLUSERS', '1')
+            ('ALLUSERS', '1'),
+            ('LicenseAccepted', '0'),
         ]
         email = metadata.author_email or metadata.maintainer_email
         if email:
@@ -257,29 +258,30 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         msilib.add_data(self.db, 'Property', props)
 
     def add_select_directory_dialog(self):
-        dialog = distutils.command.bdist_msi.PyDialog(self.db, "LicenseDlg",
+        dialog = distutils.command.bdist_msi.PyDialog(self.db, 'LicenseDlg',
                                                       self.x, self.y, self.width, self.height, self.modal,
-                                                      self.title, "Next", "Next", "Cancel", bitmap=False)
+                                                      self.title, 'Next', 'Next', 'Cancel', bitmap=False)
 
-        dialog.title("License Agreement")
+        dialog.title('License Agreement')
 
-        LICENSE_TEXT = r'''
-{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1033{\fonttbl{\f0\fnil\fcharset0 Calibri;}}
-{\*\generator Riched20 10.0.14393}\viewkind4\uc1
-\pard\sa200\sl276\slmult1\f0\fs22\lang9 test\par
-}'''
+        LICENSE_TEXT = r'{\rtf1\ansi\ansicpg1252\deff0\deflang1033{\fonttbl{\f0\fswiss\fcharset0 Arial;}}\viewkind4\uc1\pard\f0\fs20 My Text\par}'
 
-        dialog.control("ScrollableText", "ScrollableText", 15, 30, 306, 200, 3, None, LICENSE_TEXT, None, None)
+        dialog.control('ScrollableText', 'ScrollableText', 15, 30, 340, 200, 3, None, LICENSE_TEXT, None, None)
+        dialog.checkbox('AcceptLicense', 15, 240, 340, 15, 3, 'LicenseAccepted',
+                        'I accept the terms in the License Agreement', None)
 
-        dialog.back("< Back", "Next", active=False)
+        dialog.back('< Back', 'Next', active=False)
 
-        button = dialog.next("Next >", "Cancel")
-        button.event("SetTargetPath", "TARGETDIR", ordering=1)
-        button.event("SpawnWaitDialog", "WaitForCostingDlg", ordering=2)
-        button.event("EndDialog", "Return", ordering=3)
+        button = dialog.next('Next >', 'Cancel', active=False)
+        button.event('SetTargetPath', 'TARGETDIR', ordering=1)
+        button.event('SpawnWaitDialog', 'WaitForCostingDlg', ordering=2)
+        button.event('EndDialog', 'Return', ordering=3)
 
-        button = dialog.cancel("Cancel", "Back")
-        button.event("SpawnDialog", "CancelDlg")
+        button.condition('Enable', 'LicenseAccepted')
+        button.condition('Disable', 'Not LicenseAccepted')
+
+        button = dialog.cancel('Cancel', 'Back')
+        button.event('SpawnDialog', 'CancelDlg')
 
     def add_text_styles(self):
         msilib.add_data(self.db, 'TextStyle',

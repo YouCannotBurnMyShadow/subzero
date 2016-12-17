@@ -59,5 +59,5 @@ Then run:
     python setup.py bdist_msi
     
 Note that PyInstaller Utils currently cannot create shortcuts that are not placed in a root system directory. In other 
-words, you can currently have a shortcut on the desktop of in the program menu but on in a folder on the desktop or in 
+words, you can currently have a shortcut on the desktop of in the program menu but not in a folder on the desktop or in 
 a folder on the program menu.
