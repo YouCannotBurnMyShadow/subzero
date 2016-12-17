@@ -58,6 +58,7 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                          ])
 
         # TODO: Add ability to pass arguments to executable
+        # TODO: Validate shortcut values against known MSI table
         for index, shortcut in enumerate(self.shortcuts):
             shortcut = shortcut.split('=')
             baseName = '{}.exe'.format(shortcut[1].strip())
@@ -316,15 +317,18 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         button.event("EndDialog", "Exit")
 
     def finalize_options(self):
+        initial_set = (self.distribution.author and self.distribution.name) and not self.initial_target_dir
+
         distutils.command.bdist_msi.bdist_msi.finalize_options(self)
         name = self.distribution.get_name()
         fullname = self.distribution.get_fullname()
+        author = self.distribution.get_author()
         if self.initial_target_dir is None:
             if distutils.util.get_platform() == "win-amd64":
                 programFilesFolder = "ProgramFiles64Folder"
             else:
                 programFilesFolder = "ProgramFilesFolder"
-            self.initial_target_dir = r"[%s]\%s" % (programFilesFolder, name)
+            self.initial_target_dir = r"[{}]\{}\{}".format(programFilesFolder, author, name)
         if self.add_to_path is None:
             self.add_to_path = False
         if self.target_name is None:
@@ -358,18 +362,14 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         self.upgrade_code = None
         self.product_code = None
         self.add_to_path = None
-        if self.distribution.author and self.distribution.name:
-            self.initial_target_dir = r'[ProgramFiles64Folder]\{}\{}'.format(self.distribution.author,
-                                                                             self.distribution.name)
-        else:
-            self.initial_target_dir = None
+        self.initial_target_dir = None
         self.target_name = None
         self.directories = None
         self.data = None
         self.shortcuts = None
 
     def run(self):
-        self.skip_build = True
+        # self.skip_build = True
         if not self.skip_build:
             self.run_command('build_exe')
         '''
