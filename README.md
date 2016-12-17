@@ -39,7 +39,7 @@ In your setup function, you can specify PyInstaller options as follows:
 The full array of options is of course available in the PyInstaller documentation.
 
 
-# How can I build an MSI
+## How can I build an MSI?
 
 In your setup, put the following:
 
