@@ -4,7 +4,10 @@ import distutils.command.bdist_msi
 import distutils.errors
 import distutils.util
 import msilib
+import ntpath
 import os
+
+from pyinstaller_utils import build_dir
 
 __all__ = ["bdist_msi"]
 
@@ -53,17 +56,21 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                           "Installed and not Resume and not Preselected", 1250),
                          ("ProgressDlg", None, 1280)
                          ])
-        '''
-        for index, executable in enumerate(self.distribution.executables):
-            if executable.shortcutName is not None \
-                    and executable.shortcutDir is not None:
-                baseName = os.path.basename(executable.targetName)
-                msilib.add_data(self.db, "Shortcut",
-                                [("S_APP_%s" % index, executable.shortcutDir,
-                                  executable.shortcutName, "TARGETDIR",
-                                  "[TARGETDIR]%s" % baseName, None, None, None,
-                                  None, None, None, None)])
-        '''
+
+        # TODO: Add ability to pass arguments to executable
+        for index, shortcut in enumerate(self.shortcuts):
+            shortcut = shortcut.split('=')
+            baseName = '{}.exe'.format(shortcut[1].strip())
+            shortcutPath = shortcut[0].strip()
+            shortcutName = ntpath.basename(shortcutPath)
+            shortcutDir = ntpath.dirname(shortcutPath)
+
+            msilib.add_data(self.db, 'Shortcut',
+                            [('S_APP_{}'.format(index), shortcutDir,
+                              shortcutName, 'TARGETDIR',
+                              '[TARGETDIR]{}'.format(baseName), None, None, None,
+                              None, None, None, 'TARGETDIR')])
+
         for tableName, data in self.data.items():
             msilib.add_data(self.db, tableName, data)
 
@@ -117,12 +124,10 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
     def add_files(self):
         db = self.db
         cab = msilib.CAB("distfiles")
-        f = msilib.Feature(db, "default", "Default Feature", "Everything", 1,
-                           directory="TARGETDIR")
+        f = msilib.Feature(db, "default", "Default Feature", "Everything", 1, directory="TARGETDIR")
         f.set_current()
         rootdir = os.path.abspath(self.bdist_dir)
-        root = msilib.Directory(db, cab, None, rootdir, "TARGETDIR",
-                                "SourceDir")
+        root = msilib.Directory(db, cab, None, rootdir, "TARGETDIR", "SourceDir")
         db.Commit()
         todo = [root]
         while todo:
@@ -334,19 +339,40 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         if self.data is None:
             self.data = {}
 
+        # attempt to find the build directory
+        build_found = False
+        for i in range(0, 3):
+            if os.path.basename(self.bdist_dir) == 'build':
+                build_found = True
+                break
+            else:
+                self.bdist_dir = ntpath.dirname(self.bdist_dir)
+
+        if not build_found:
+            raise EnvironmentError('Unable to identify build directory!')
+
+        self.bdist_dir = os.path.join(self.bdist_dir, build_dir())
+
     def initialize_options(self):
         distutils.command.bdist_msi.bdist_msi.initialize_options(self)
         self.upgrade_code = None
         self.product_code = None
         self.add_to_path = None
-        self.initial_target_dir = None
+        if self.distribution.author and self.distribution.name:
+            self.initial_target_dir = r'[ProgramFiles64Folder]\{}\{}'.format(self.distribution.author,
+                                                                             self.distribution.name)
+        else:
+            self.initial_target_dir = None
         self.target_name = None
         self.directories = None
         self.data = None
+        self.shortcuts = None
 
     def run(self):
+        self.skip_build = True
         if not self.skip_build:
-            self.run_command('build')
+            self.run_command('build_exe')
+        '''
         install = self.reinitialize_command('install', reinit_subcommands=1)
         install.prefix = self.bdist_dir
         install.skip_build = self.skip_build
@@ -354,6 +380,7 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         distutils.log.info("installing to %s", self.bdist_dir)
         install.ensure_finalized()
         install.run()
+        '''
         self.mkpath(self.dist_dir)
         fullname = self.distribution.get_fullname()
         if os.path.exists(self.target_name):
@@ -377,6 +404,8 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         self.db.Commit()
         self.distribution.dist_files.append(('bdist_msi', sversion or 'any', self.target_name))
 
+        '''
         if not self.keep_temp:
             distutils.dir_util.remove_tree(self.bdist_dir,
                                            dry_run=self.dry_run)
+        '''

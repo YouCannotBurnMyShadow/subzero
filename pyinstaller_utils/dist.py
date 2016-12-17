@@ -12,6 +12,7 @@ import PyInstaller.__main__
 from PyInstaller.building.makespec import main as makespec_main
 from pkg_resources import EntryPoint
 
+from pyinstaller_utils import build_dir
 from pyinstaller_utils.windist import bdist_msi
 
 try:
@@ -46,9 +47,7 @@ class build_exe(distutils.core.Command):
     def finalize_options(self):
         distutils.command.build.build.finalize_options(self)
         if self.build_exe is None:
-            dirName = "exe.%s-%s" % \
-                      (distutils.util.get_platform(), sys.version[0:3])
-            self.build_exe = os.path.join(self.build_base, dirName)
+            self.build_exe = os.path.join(self.build_base, build_dir())
 
     def run(self):
         metadata = self.distribution.metadata

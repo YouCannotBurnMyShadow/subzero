@@ -1,3 +1,4 @@
+import distutils
 import os
 
 from PyInstaller import DEFAULT_WORKPATH
@@ -16,6 +17,10 @@ if sys.platform == "win32":
     pass
 elif sys.platform == "darwin":
     pass
+
+
+def build_dir():
+    return "exe.{}-{}".format(distutils.util.get_platform(), sys.version[0:3])
 
 def Entrypoint(dist, group, name,
                scripts=None, pathex=None, hiddenimports=None,
