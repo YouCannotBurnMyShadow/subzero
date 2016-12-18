@@ -246,7 +246,6 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
             ('Progress2', 'installs'),
             ('MaintenanceForm_Action', 'Repair'),
             ('ALLUSERS', '1'),
-            ('LicenseAccepted', '0'),
         ]
         email = metadata.author_email or metadata.maintainer_email
         if email:
@@ -258,32 +257,32 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         msilib.add_data(self.db, 'Property', props)
 
     def add_select_directory_dialog(self):
-        dialog = distutils.command.bdist_msi.PyDialog(self.db, 'LicenseDlg',
-                                                      self.x, self.y, self.width, self.height, self.modal,
-                                                      self.title, 'Next', 'Next', 'Cancel', bitmap=False)
+        # TODO: Parse other types of license files
+        for file in ['LICENSE', 'LICENSE.txt']:
+            if os.path.isfile(file):
+                license_file = open(file)
+                break
 
-        dialog.title('License Agreement')
+        if license_file:
+            dialog = distutils.command.bdist_msi.PyDialog(self.db, 'LicenseDlg',
+                                                          self.x, self.y, self.width, self.height, self.modal,
+                                                          self.title, 'Next', 'Next', 'Cancel', bitmap=False)
+            dialog.title('License Agreement')
+            dialog.control('ScrollableText', 'ScrollableText', 15, 30, 340, 200, 3, None, license_text(license_file),
+                           None, None)
+            dialog.checkbox('AcceptLicense', 15, 240, 340, 15, 3, 'LicenseAccepted',
+                            'I accept the terms in the License Agreement', None)
+            dialog.back('< Back', 'Next', active=False)
 
-        # TODO: Find license path
-        license_file = open(r'')
+            button = dialog.next('Next >', 'Cancel', active=False)
+            button.event('SetTargetPath', 'TARGETDIR', ordering=1)
+            button.event('SpawnWaitDialog', 'WaitForCostingDlg', ordering=2)
+            button.event('EndDialog', 'Return', ordering=3)
+            button.condition('Enable', 'LicenseAccepted')
+            button.condition('Disable', 'Not LicenseAccepted')
 
-        dialog.control('ScrollableText', 'ScrollableText', 15, 30, 340, 200, 3, None, license_text(license_file), None,
-                       None)
-        dialog.checkbox('AcceptLicense', 15, 240, 340, 15, 3, 'LicenseAccepted',
-                        'I accept the terms in the License Agreement', None)
-
-        dialog.back('< Back', 'Next', active=False)
-
-        button = dialog.next('Next >', 'Cancel', active=False)
-        button.event('SetTargetPath', 'TARGETDIR', ordering=1)
-        button.event('SpawnWaitDialog', 'WaitForCostingDlg', ordering=2)
-        button.event('EndDialog', 'Return', ordering=3)
-
-        button.condition('Enable', 'LicenseAccepted')
-        button.condition('Disable', 'Not LicenseAccepted')
-
-        button = dialog.cancel('Cancel', 'Back')
-        button.event('SpawnDialog', 'CancelDlg')
+            button = dialog.cancel('Cancel', 'Back')
+            button.event('SpawnDialog', 'CancelDlg')
 
     def add_text_styles(self):
         msilib.add_data(self.db, 'TextStyle',

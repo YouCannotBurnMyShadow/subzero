@@ -31,8 +31,8 @@ def license_text(license_file):
     :param license_file: file-like object
     :return:
     """
-    wordpad_header = r'''{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang3081{\fonttbl{\f0\fswiss\fprq2\fcharset0  Arial;}}
-{\*\generator Riched20 10.0.14393}\viewkind4\uc1'''
+    wordpad_header = r'''{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1033{\fonttbl{\f0\fnil\fcharset255 Times New Roman;}
+{\*\generator Riched20 10.0.14393}\viewkind4\uc1'''.replace('\n', '\r\n')
 
     r = PyRTF.Renderer()
 
@@ -41,8 +41,17 @@ def license_text(license_file):
     sec = PyRTF.Section()
     doc.Sections.append(sec)
 
+    is_blank = False
+    paragraph_text = ''
     for line in license_file:
-        sec.append(line)
+        if not line or line.isspace():
+            is_blank = True
+        elif is_blank:
+            sec.append(paragraph_text)
+            is_blank = False
+            paragraph_text = line
+        else:
+            paragraph_text += ' ' + line
 
     f = StringIO()
     f.write(wordpad_header)
