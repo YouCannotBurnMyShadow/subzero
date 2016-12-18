@@ -7,7 +7,7 @@ import msilib
 import ntpath
 import os
 
-from pyinstaller_utils import build_dir
+from pyinstaller_utils import build_dir, license_text
 
 __all__ = ["bdist_msi"]
 
@@ -264,9 +264,11 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
 
         dialog.title('License Agreement')
 
-        LICENSE_TEXT = r'{\rtf1\ansi\ansicpg1252\deff0\deflang1033{\fonttbl{\f0\fswiss\fcharset0 Arial;}}\viewkind4\uc1\pard\f0\fs20 My Text\par}'
+        # TODO: Find license path
+        license_file = open(r'')
 
-        dialog.control('ScrollableText', 'ScrollableText', 15, 30, 340, 200, 3, None, LICENSE_TEXT, None, None)
+        dialog.control('ScrollableText', 'ScrollableText', 15, 30, 340, 200, 3, None, license_text(license_file), None,
+                       None)
         dialog.checkbox('AcceptLicense', 15, 240, 340, 15, 3, 'LicenseAccepted',
                         'I accept the terms in the License Agreement', None)
 

@@ -1,6 +1,8 @@
 import distutils
 import os
+from io import StringIO
 
+import PyRTF
 from PyInstaller import DEFAULT_WORKPATH
 from PyInstaller.building.build_main import Analysis
 
@@ -21,6 +23,32 @@ elif sys.platform == "darwin":
 
 def build_dir():
     return "exe.{}-{}".format(distutils.util.get_platform(), sys.version[0:3])
+
+
+def license_text(license_file):
+    """
+    Generates rich text given a license file-like object
+    :param license_file: file-like object
+    :return:
+    """
+    wordpad_header = r'''{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang3081{\fonttbl{\f0\fswiss\fprq2\fcharset0  Arial;}}
+{\*\generator Riched20 10.0.14393}\viewkind4\uc1'''
+
+    r = PyRTF.Renderer()
+
+    doc = PyRTF.Document()
+    ss = doc.StyleSheet
+    sec = PyRTF.Section()
+    doc.Sections.append(sec)
+
+    for line in license_file:
+        sec.append(line)
+
+    f = StringIO()
+    f.write(wordpad_header)
+    r.Write(doc, f)
+
+    return f.getvalue()
 
 def Entrypoint(dist, group, name,
                scripts=None, pathex=None, hiddenimports=None,
