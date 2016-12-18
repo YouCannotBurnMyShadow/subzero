@@ -1,7 +1,11 @@
 # pyinstaller_utils
-PyInstaller Utils allows you to build your PyInstaller executables from setup.py and create MSI installers to distribute
-them. PyInstaller Utils uses code from cx_Freeze to avoid reinventing the wheel. Therefore, some files are licensed 
-under the PSF license even though the project is licensed under GPL.
+## What is Pyinstaller Utils?
+
+PyInstaller Utils allows you to rapidly deploy your [frozen](http://docs.python-guide.org/en/latest/shipping/freezing/)
+Python application with minimal effort and additional code. PyInstaller utils does this by providing a simple and
+intuitive wrapper for PyInstaller coupled with an MSI builder. With a few lines of code and a single command, you can
+go directly from Python code to a compiled MSI installer. In addiiton, PyInstaller Utils does not require any 
+non-Python dependencies beyond those required by PyInstaller, making it trivial to install.
 
 ## How do I install it?
 
@@ -17,7 +21,7 @@ from pyinstaller_utils.dist import setup
 
 Then run the following command:
 
-    python setup.py build_exe
+    python setup.py bdist_msi
 
 That's it! PyInstaller will build all of the entry points and scripts specified in your executable.
 
@@ -32,32 +36,19 @@ In your setup function, you can specify PyInstaller options as follows:
               'hiddenimports': ['requests'],
               'pathex': ['/my/path', '/their/path'],
               'icon': '/path/to/icon.png',
-          }
-      },
+          },
+          'bdist_msi': {
+              'upgrade_code': '{66620F3A-DC3A-11E2-B341-002219E9B01E}',
+              'shortcuts': [
+                  'ProgramMenuFolder\Hello World = my_project'
+              ],
+          },
   ...)
 ```
-The full array of options is of course available in the PyInstaller documentation.
+The full array of options for build_exe is available in the PyInstaller documentation. Providing an upgrade code is
+**strongly recommended** for the bdist_msi command. A license agreement will be added to the installer if there is 
+a license text file in the same directory as setup.py.
 
-
-## How can I build an MSI?
-
-In your setup, put the following:
-
-```python
-setup(...
-'bdist_msi': {
-    'upgrade_code': '{66620F3A-DC3A-11E2-B341-002219E9B01E}',
-    'shortcuts': [
-      'ProgramMenuFolder\Hello World = my_project'
-    ],
-}
-...)
-```
-
-Then run:
-
-    python setup.py bdist_msi
-    
 Note that PyInstaller Utils currently cannot create shortcuts that are not placed in a root system directory. In other 
 words, you can currently have a shortcut on the desktop of in the program menu but not in a folder on the desktop or in 
-a folder on the program menu.
+a folder on the program menu. This may be resolved in the future if there is greater interest.

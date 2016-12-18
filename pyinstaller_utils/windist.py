@@ -51,14 +51,15 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         msilib.add_data(self.db, 'InstallUISequence',
                         [("PrepareDlg", None, 140),
                          ("A_SET_TARGET_DIR", 'TARGETDIR=""', 401),
-                         ("LicenseDlg", "not Installed", 1230),
-                         ("MaintenanceTypeDlg",
-                          "Installed and not Resume and not Preselected", 1250),
-                         ("ProgressDlg", None, 1280)
+                         ('LicenseDlg', 'not Installed', 1230),
+                         ('MaintenanceTypeDlg',
+                          'Installed and not Resume and not Preselected', 1250),
+                         ('ProgressDlg', None, 1280)
                          ])
 
         # TODO: Add ability to pass arguments to executable
         # TODO: Validate shortcut values against known MSI table
+        # TODO: Add ability to specify nested shortcuts
         for index, shortcut in enumerate(self.shortcuts):
             shortcut = shortcut.split('=')
             baseName = '{}.exe'.format(shortcut[1].strip())
@@ -76,59 +77,59 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
             msilib.add_data(self.db, tableName, data)
 
     def add_cancel_dialog(self):
-        dialog = msilib.Dialog(self.db, "CancelDlg", 50, 10, 260, 85, 3,
-                               self.title, "No", "No", "No")
-        dialog.text("Text", 48, 15, 194, 30, 3,
-                    "Are you sure you want to cancel [ProductName] installation?")
-        button = dialog.pushbutton("Yes", 72, 57, 56, 17, 3, "Yes", "No")
-        button.event("EndDialog", "Exit")
-        button = dialog.pushbutton("No", 132, 57, 56, 17, 3, "No", "Yes")
-        button.event("EndDialog", "Return")
+        dialog = msilib.Dialog(self.db, 'CancelDlg', 50, 50, 260, 85, 3,
+                               self.title, 'No', 'No', 'No')
+        dialog.text('Text', 48, 15, 194, 30, 3,
+                    'Are you sure you want to cancel [ProductName] installation?')
+        button = dialog.pushbutton('Yes', 72, 57, 56, 17, 3, 'Yes', 'No')
+        button.event('EndDialog', 'Exit')
+        button = dialog.pushbutton('No', 132, 57, 56, 17, 3, 'No', 'Yes')
+        button.event('EndDialog', 'Return')
 
     def add_error_dialog(self):
-        dialog = msilib.Dialog(self.db, "ErrorDlg", 50, 10, 330, 101, 65543,
-                               self.title, "ErrorText", None, None)
-        dialog.text("ErrorText", 50, 9, 280, 48, 3, "")
-        for text, x in [("No", 120), ("Yes", 240), ("Abort", 0),
-                        ("Cancel", 42), ("Ignore", 81), ("Ok", 159), ("Retry", 198)]:
+        dialog = msilib.Dialog(self.db, 'ErrorDlg', 50, 10, 330, 101, 65543,
+                               self.title, 'ErrorText', None, None)
+        dialog.text('ErrorText', 50, 9, 280, 48, 3, '')
+        for text, x in [('No', 120), ('Yes', 240), ('Abort', 0),
+                        ('Cancel', 42), ('Ignore', 81), ('Ok', 159), ('Retry', 198)]:
             button = dialog.pushbutton(text[0], x, 72, 81, 21, 3, text, None)
-            button.event("EndDialog", "Error%s" % text)
+            button.event('EndDialog', 'Error%s' % text)
 
     def add_exit_dialog(self):
-        dialog = distutils.command.bdist_msi.PyDialog(self.db, "ExitDialog",
+        dialog = distutils.command.bdist_msi.PyDialog(self.db, 'ExitDialog',
                                                       self.x, self.y, self.width, self.height, self.modal,
-                                                      self.title, "Finish", "Finish", "Finish")
-        dialog.title("Completing the [ProductName] installer")
-        dialog.back("< Back", "Finish", active=False)
-        dialog.cancel("Cancel", "Back", active=False)
-        dialog.text("Description", 15, 235, 320, 20, 0x30003,
-                    "Click the Finish button to exit the installer.")
-        button = dialog.next("Finish", "Cancel", name="Finish")
-        button.event("EndDialog", "Return")
+                                                      self.title, 'Finish', 'Finish', 'Finish')
+        dialog.title('Completing the [ProductName] installer')
+        dialog.back('Back', 'Finish', active=False)
+        dialog.cancel('Cancel', 'Back', active=False)
+        dialog.text('Description', 15, 207, 320, 20, 0x30003,
+                    'Click the Finish button to exit the installer.')
+        button = dialog.next('Finish', 'Cancel', name='Finish')
+        button.event('EndDialog', 'Return')
 
     def add_fatal_error_dialog(self):
-        dialog = distutils.command.bdist_msi.PyDialog(self.db, "FatalError",
+        dialog = distutils.command.bdist_msi.PyDialog(self.db, 'FatalError',
                                                       self.x, self.y, self.width, self.height, self.modal,
-                                                      self.title, "Finish", "Finish", "Finish")
-        dialog.title("[ProductName] installer ended prematurely")
-        dialog.back("< Back", "Finish", active=False)
-        dialog.cancel("Cancel", "Back", active=False)
-        dialog.text("Description1", 15, 70, 320, 80, 0x30003,
-                    "[ProductName] setup ended prematurely because of an error. "
-                    "Your system has not been modified. To install this program "
-                    "at a later time, please run the installation again.")
-        dialog.text("Description2", 15, 155, 320, 20, 0x30003,
-                    "Click the Finish button to exit the installer.")
-        button = dialog.next("Finish", "Cancel", name="Finish")
-        button.event("EndDialog", "Exit")
+                                                      self.title, 'Finish', 'Finish', 'Finish')
+        dialog.title('[ProductName] installer ended prematurely')
+        dialog.back('Back', 'Finish', active=False)
+        dialog.cancel('Cancel', 'Back', active=False)
+        dialog.text('Description1', 15, 70, 320, 80, 0x30003,
+                    '[ProductName] setup ended prematurely because of an error. '
+                    'Your system has not been modified. To install this program '
+                    'at a later time, please run the installation again.')
+        dialog.text('Description2', 15, 155, 320, 20, 0x30003,
+                    'Click the Finish button to exit the installer.')
+        button = dialog.next('Finish', 'Cancel', name='Finish')
+        button.event('EndDialog', 'Exit')
 
     def add_files(self):
         db = self.db
-        cab = msilib.CAB("distfiles")
-        f = msilib.Feature(db, "default", "Default Feature", "Everything", 1, directory="TARGETDIR")
+        cab = msilib.CAB('distfiles')
+        f = msilib.Feature(db, 'default', 'Default Feature', 'Everything', 1, directory='TARGETDIR')
         f.set_current()
         rootdir = os.path.abspath(self.bdist_dir)
-        root = msilib.Directory(db, cab, None, rootdir, "TARGETDIR", "SourceDir")
+        root = msilib.Directory(db, cab, None, rootdir, 'TARGETDIR', 'SourceDir')
         db.Commit()
         todo = [root]
         while todo:
@@ -143,26 +144,26 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         cab.commit(db)
 
     def add_files_in_use_dialog(self):
-        dialog = distutils.command.bdist_msi.PyDialog(self.db, "FilesInUse",
+        dialog = distutils.command.bdist_msi.PyDialog(self.db, 'FilesInUse',
                                                       self.x, self.y, self.width, self.height, 19, self.title,
-                                                      "Retry", "Retry", "Retry", bitmap=False)
-        dialog.text("Title", 15, 6, 200, 15, 0x30003,
-                    r"{\DlgFontBold8}Files in Use")
-        dialog.text("Description", 20, 23, 280, 20, 0x30003,
-                    "Some files that need to be updated are currently in use.")
-        dialog.text("Text", 20, 55, 330, 50, 3,
-                    "The following applications are using files that need to be "
-                    "updated by this setup. Close these applications and then "
-                    "click Retry to continue the installation or Cancel to exit "
-                    "it.")
-        dialog.control("List", "ListBox", 20, 107, 330, 130, 7,
-                       "FileInUseProcess", None, None, None)
-        button = dialog.back("Exit", "Ignore", name="Exit")
-        button.event("EndDialog", "Exit")
-        button = dialog.next("Ignore", "Retry", name="Ignore")
-        button.event("EndDialog", "Ignore")
-        button = dialog.cancel("Retry", "Exit", name="Retry")
-        button.event("EndDialog", "Retry")
+                                                      'Retry', 'Retry', 'Retry', bitmap=False)
+        dialog.text('Title', 15, 6, 200, 15, 0x30003,
+                    r'{\DlgFontBold8}Files in Use')
+        dialog.text('Description', 20, 23, 280, 20, 0x30003,
+                    'Some files that need to be updated are currently in use.')
+        dialog.text('Text', 20, 55, 330, 50, 3,
+                    'The following applications are using files that need to be '
+                    'updated by this setup. Close these applications and then '
+                    'click Retry to continue the installation or Cancel to exit '
+                    'it.')
+        dialog.control('List', 'ListBox', 20, 107, 330, 130, 7,
+                       'FileInUseProcess', None, None, None)
+        button = dialog.back('Exit', 'Ignore', name='Exit')
+        button.event('EndDialog', 'Exit')
+        button = dialog.next('Ignore', 'Retry', name='Ignore')
+        button.event('EndDialog', 'Ignore')
+        button = dialog.cancel('Retry', 'Exit', name='Retry')
+        button.event('EndDialog', 'Retry')
 
     def add_maintenance_type_dialog(self):
         dialog = distutils.command.bdist_msi.PyDialog(self.db,
@@ -175,7 +176,7 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                                   "MaintenanceForm_Action", "", "Next")
         group.add("Repair", 0, 18, 300, 17, "&Repair [ProductName]")
         group.add("Remove", 0, 36, 300, 17, "Re&move [ProductName]")
-        dialog.back("< Back", None, active=False)
+        dialog.back("Back", None, active=False)
         button = dialog.next("Finish", "Cancel")
         button.event("[REINSTALL]", "ALL",
                      'MaintenanceForm_Action="Repair"', 5)
@@ -231,8 +232,8 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         control = dialog.control("ProgressBar", "ProgressBar", 35, 120, 300,
                                  10, 65537, None, "Progress done", None, None)
         control.mapping("SetProgress", "Progress")
-        dialog.back("< Back", "Next", active=False)
-        dialog.next("Next >", "Cancel", active=False)
+        dialog.back("Back", "Next", active=False)
+        dialog.next("Next", "Cancel", active=False)
         button = dialog.cancel("Cancel", "Back")
         button.event("SpawnDialog", "CancelDlg")
 
@@ -256,28 +257,22 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
             props.append(("UpgradeCode", self.upgrade_code))
         msilib.add_data(self.db, 'Property', props)
 
-    def add_select_directory_dialog(self):
-        # TODO: Parse other types of license files
-        for file in ['LICENSE', 'LICENSE.txt']:
-            if os.path.isfile(file):
-                license_file = open(file)
-                break
-
-        if license_file:
+    def add_license_dialog(self):
+        if self.license_text:
             dialog = distutils.command.bdist_msi.PyDialog(self.db, 'LicenseDlg',
                                                           self.x, self.y, self.width, self.height, self.modal,
                                                           self.title, 'Next', 'Next', 'Cancel', bitmap=False)
             dialog.title('License Agreement')
-            dialog.control('ScrollableText', 'ScrollableText', 15, 30, 340, 200, 3, None, license_text(license_file),
-                           None, None)
-            dialog.checkbox('AcceptLicense', 15, 240, 340, 15, 3, 'LicenseAccepted',
+            dialog.control('ScrollableText', 'ScrollableText', 20, 60, 330, 140, 7, None,
+                           self.license_text, None, None)
+            dialog.checkbox('AcceptLicense', 20, 207, 330, 18, 3, 'LicenseAccepted',
                             'I accept the terms in the License Agreement', None)
-            dialog.back('< Back', 'Next', active=False)
+            dialog.back('Back', 'Next', active=False)
 
-            button = dialog.next('Next >', 'Cancel', active=False)
-            button.event('SetTargetPath', 'TARGETDIR', ordering=1)
-            button.event('SpawnWaitDialog', 'WaitForCostingDlg', ordering=2)
-            button.event('EndDialog', 'Return', ordering=3)
+            button = dialog.next('Next', 'Cancel', active=False)
+            # button.event('SetTargetPath', 'TARGETDIR', ordering=1)
+            button.event('SpawnWaitDialog', 'WaitForCostingDlg', ordering=1)
+            button.event('EndDialog', 'Return', ordering=2)
             button.condition('Enable', 'LicenseAccepted')
             button.condition('Disable', 'Not LicenseAccepted')
 
@@ -302,7 +297,7 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         self.add_files_in_use_dialog()
         self.add_wait_for_costing_dialog()
         self.add_prepare_dialog()
-        self.add_select_directory_dialog()
+        self.add_license_dialog()
         self.add_progress_dialog()
         self.add_maintenance_type_dialog()
 
@@ -316,20 +311,20 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                              ])
 
     def add_user_exit_dialog(self):
-        dialog = distutils.command.bdist_msi.PyDialog(self.db, "UserExit",
+        dialog = distutils.command.bdist_msi.PyDialog(self.db, 'UserExit',
                                                       self.x, self.y, self.width, self.height, self.modal,
-                                                      self.title, "Finish", "Finish", "Finish")
-        dialog.title("[ProductName] installer was interrupted")
-        dialog.back("< Back", "Finish", active=False)
-        dialog.cancel("Cancel", "Back", active=False)
-        dialog.text("Description1", 15, 70, 320, 80, 0x30003,
-                    "[ProductName] setup was interrupted. Your system has not "
-                    "been modified. To install this program at a later time, "
-                    "please run the installation again.")
-        dialog.text("Description2", 15, 155, 320, 20, 0x30003,
-                    "Click the Finish button to exit the installer.")
-        button = dialog.next("Finish", "Cancel", name="Finish")
-        button.event("EndDialog", "Exit")
+                                                      self.title, 'Finish', 'Finish', 'Finish')
+        dialog.title('[ProductName] installer was interrupted')
+        dialog.back('Back', 'Finish', active=False)
+        dialog.cancel('Cancel', 'Back', active=False)
+        dialog.text('Description1', 15, 70, 320, 80, 0x30003,
+                    '[ProductName] setup was interrupted. Your system has not '
+                    'been modified. To install this program at a later time, '
+                    'please run the installation again.')
+        dialog.text('Description2', 15, 207, 320, 20, 0x30003,
+                    'Click the Finish button to exit the installer.')
+        button = dialog.next('Finish', 'Cancel', name='Finish')
+        button.event('EndDialog', 'Exit')
 
     def add_wait_for_costing_dialog(self):
         dialog = msilib.Dialog(self.db, "WaitForCostingDlg", 50, 10, 260, 85,
@@ -381,6 +376,7 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
             raise EnvironmentError('Unable to identify build directory!')
 
         self.bdist_dir = os.path.join(self.bdist_dir, build_dir())
+        self.height = 270
 
     def initialize_options(self):
         distutils.command.bdist_msi.bdist_msi.initialize_options(self)
@@ -393,8 +389,14 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         self.data = None
         self.shortcuts = None
 
+        # TODO: Parse other types of license files
+        for file in ['LICENSE', 'LICENSE.txt']:
+            if os.path.isfile(file):
+                self.license_text = license_text(open(file))
+                break
+
     def run(self):
-        self.skip_build = True
+        # self.skip_build = True
         if not self.skip_build:
             self.run_command('build_exe')
         '''
