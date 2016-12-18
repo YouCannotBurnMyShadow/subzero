@@ -39,6 +39,7 @@ class build_exe(distutils.core.Command):
     def initialize_options(self):
         distutils.command.build.build.initialize_options(self)
         self.build_exe = None
+        self.datas = []  # signature does not detect datas for some reason
 
         for name, parameter in inspect.signature(makespec_main).parameters.items():
             if name not in (self._excluded_args + ['args', 'kwargs']) and not getattr(self, name, None):

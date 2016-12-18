@@ -32,17 +32,19 @@ In your setup function, you can specify PyInstaller options as follows:
 ```python
   setup(...
   options={
-          'build_exe': {
-              'hiddenimports': ['requests'],
-              'pathex': ['/my/path', '/their/path'],
-              'icon': '/path/to/icon.png',
+'         build_exe': {
+              'hiddenimports': [],
+              'pathex': [],
+              'datas': [],
+              'icon_file': None,
           },
           'bdist_msi': {
               'upgrade_code': '{66620F3A-DC3A-11E2-B341-002219E9B01E}',
+              # 'initial_target_dir': r'[ProgramFiles64Folder]\{}\{}' % (company_name, product_name),
               'shortcuts': [
                   'ProgramMenuFolder\Hello World = my_project'
               ],
-          },
+          }
   ...)
 ```
 The full array of options for build_exe is available in the PyInstaller documentation. Providing an upgrade code is
