@@ -15,6 +15,9 @@ setup(name='hello_world',
       options={
           'build_exe': {
               'hiddenimports': [],
+              'pathex': [],
+              'datas': [],
+              'icon_file': None,
           },
           'bdist_msi': {
               'upgrade_code': '{66620F3A-DC3A-11E2-B341-002219E9B01E}',
