@@ -69,20 +69,6 @@ environment:
       TEST1_CMD: ""
       TEST2_CMD: "py.test --maxfail 5 --durations=10 tests"
 
-    - PYTHON: "C:\\Python27"
-      PYTHON_VERSION: "2.7"
-      PYTHON_ARCH: "32"
-      VCVARSALL: "x86"
-      TEST1_CMD: "py.test --maxfail 5 --durations=10 tests"
-      TEST2_CMD: ""
-
-    - PYTHON: "C:\\Python27"
-      PYTHON_VERSION: "2.7"
-      PYTHON_ARCH: "32"
-      VCVARSALL: "x86"
-      TEST1_CMD: ""
-      TEST2_CMD: "py.test --maxfail 5 --durations=10 tests"
-
 cache:
   # Cache downloaded pip packages.
   - "C:\\Users\\appveyor\\AppData\\Local\\pip"
