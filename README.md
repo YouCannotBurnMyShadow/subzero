@@ -1,5 +1,5 @@
 # pyinstaller_utils
-![build status][2]
+[![build status][2]][3]
 ## What is Pyinstaller Utils?
 
 PyInstaller Utils allows you to rapidly deploy your [frozen][1] Python application with minimal effort and additional
@@ -10,6 +10,7 @@ PyInstaller, making it trivial to install.
 
 [1]: http://docs.python-guide.org/en/latest/shipping/freezing/
 [2]: https://ci.appveyor.com/api/projects/status/github/xoviat/pyinstaller_utils?branch=master&svg=true
+[3]: https://ci.appveyor.com/project/xoviat/pyinstaller-utils
 
 ## How do I install it?
 
