@@ -85,5 +85,3 @@ test_script:
   # if we're just updating the cache.
   - "if not \"%APPVEYOR_SCHEDULED_BUILD%\" == \"True\" (
     %CMD_IN_ENV% %TEST1_CMD% )"
-  - "if not \"%APPVEYOR_SCHEDULED_BUILD%\" == \"True\" (
-    %CMD_IN_ENV% %TEST2_CMD% )"
