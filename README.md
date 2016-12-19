@@ -1,11 +1,16 @@
 # pyinstaller_utils
+[![build status][2]][3]
 ## What is Pyinstaller Utils?
 
-PyInstaller Utils allows you to rapidly deploy your [frozen](http://docs.python-guide.org/en/latest/shipping/freezing/)
-Python application with minimal effort and additional code. PyInstaller utils does this by providing a simple and
-intuitive wrapper for PyInstaller coupled with an MSI builder. With a few lines of code and a single command, you can
-go directly from Python code to a compiled MSI installer. In addition, PyInstaller Utils does not require any 
-non-Python dependencies beyond those required by PyInstaller, making it trivial to install.
+PyInstaller Utils allows you to rapidly deploy your [frozen][1] Python application with minimal effort and additional
+code. PyInstaller utils does this by providing a simple and intuitive wrapper for PyInstaller coupled with an MSI
+builder. With a few lines of code and a single command, you can go directly from Python code to a compiled MSI
+installer. In addition, PyInstaller Utils does not require any non-Python dependencies beyond those required by
+PyInstaller, making it trivial to install.
+
+[1]: http://docs.python-guide.org/en/latest/shipping/freezing/
+[2]: https://ci.appveyor.com/api/projects/status/github/xoviat/pyinstaller_utils?branch=master&svg=true
+[3]: https://ci.appveyor.com/project/xoviat/pyinstaller-utils
 
 ## How do I install it?
 
