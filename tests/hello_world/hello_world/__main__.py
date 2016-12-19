@@ -1,5 +1,5 @@
 def main():
-    input("Press Enter to continue...")
+    print("Script executed successfully!")
 
 
 def gui():
