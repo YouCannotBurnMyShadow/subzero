@@ -15,7 +15,7 @@ LICENSE = open(LICENSE_PATH).readline().strip()
 setup(
     name='pyinstaller_utils',
     version=VERSION,
-    description='Additions to Pyinstaller that are not currently included in the default code base',
+    description='PyInstaller setuptools integration',
     long_description=DESCRIPTION,
     author='Mars Galactic',
     author_email='xoviat@users.noreply.github.com',
@@ -25,5 +25,5 @@ setup(
     platforms='any',
     keywords=['pyinstaller'],
     classifiers=[],
-    install_requires=['pyinstaller', 'PyRTF3'],
+    install_requires=['PyInstaller', 'PyRTF3'],
     )
