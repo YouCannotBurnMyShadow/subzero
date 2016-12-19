@@ -79,6 +79,7 @@ class build_exe(distutils.core.Command):
             py_options = {}
 
         os.makedirs(self.build_temp, exist_ok=True)
+        shutil.rmtree(self.build_exe, ignore_errors=True)
 
         for entry_point in entry_points.values():
             scripts.append(self._GenerateScript(entry_point, self.build_temp))
