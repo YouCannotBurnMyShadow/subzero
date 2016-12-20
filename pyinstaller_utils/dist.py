@@ -9,29 +9,25 @@ import shutil
 import sys
 
 import PyInstaller.__main__
+import pkg_resources
 from PyInstaller.building.makespec import main as makespec_main
 from pkg_resources import EntryPoint
 
-
-def get_makespec_args():
-    excluded_args = [
-        'scripts',
-    ]
-    names = []
-
-    for name, parameter in inspect.signature(makespec_main).parameters.items():
-        if name not in (excluded_args + ['args', 'kwargs']):
-            names.append(name)
-
-    return names
-
-
-MAKESPEC_ARGS = get_makespec_args()
-BUILD_DIR = "exe.{}-{}".format(distutils.util.get_platform(), sys.version[0:3])
-
-
 __all__ = ["build_exe", "setup"]
 
+
+# Monkeypatches yield_lines to accept executables
+def new_yield_lines(original_yield_lines):
+    def yield_lines(strs):
+        if type(strs) is Executable:
+            return original_yield_lines(str(strs))
+        else:
+            return original_yield_lines(strs)
+
+    return yield_lines
+
+
+pkg_resources.yield_lines = new_yield_lines(pkg_resources.yield_lines)
 
 class build_exe(distutils.core.Command):
     description = "build executables from Python scripts"
@@ -40,6 +36,20 @@ class build_exe(distutils.core.Command):
     _excluded_args = [
         'scripts',
     ]
+    _executables = []
+
+    @classmethod
+    def makespec_args(cls):
+        names = ['datas']  # signature does not detect datas for some reason
+        for name, parameter in inspect.signature(makespec_main).parameters.items():
+            if name not in (cls._excluded_args + ['args', 'kwargs']):
+                names.append(name)
+
+        return names
+
+    @staticmethod
+    def build_dir():
+        return "exe.{}-{}".format(distutils.util.get_platform(), sys.version[0:3])
 
     def add_to_path(self, name):
         sourceDir = getattr(self, name.lower())
@@ -49,19 +59,15 @@ class build_exe(distutils.core.Command):
     def initialize_options(self):
         distutils.command.build.build.initialize_options(self)
         self.build_exe = None
-        self.datas = []  # signature does not detect datas for some reason
 
-        for name in MAKESPEC_ARGS:
+        for name in self.makespec_args():
             if not getattr(self, name, None):
                 setattr(self, name, None)
 
     def finalize_options(self):
         distutils.command.build.build.finalize_options(self)
         if self.build_exe is None:
-            self.build_exe = os.path.join(self.build_base, BUILD_DIR)
-
-    def run(self):
-        metadata = self.distribution.metadata
+            self.build_exe = os.path.join(self.build_base, self.build_dir())
 
         try:
             self.distribution.install_requires = list(self.distribution.install_requires)
@@ -74,9 +80,18 @@ class build_exe(distutils.core.Command):
             self.distribution.packages = []
 
         try:
-            scripts = list(self.distribution.scripts)
+            self.distribution.scripts = list(self.distribution.scripts)
         except TypeError:
-            scripts = []
+            self.distribution.scripts = []
+
+        self.distribution.entry_points.setdefault('console_scripts', [])
+        for script in self.distribution.scripts + self.distribution.entry_points['console_scripts']:
+            if type(script) is Executable:
+                self._executables.append(script)
+            else:
+                self._executables.append(None)
+
+    def run(self):
         try:
             entry_points = EntryPoint.parse_map(self.distribution.entry_points)['console_scripts']
         except KeyError:
@@ -88,6 +103,7 @@ class build_exe(distutils.core.Command):
         except (KeyError, TypeError):
             py_options = {}
 
+        scripts = self.distribution.scripts
         os.makedirs(self.build_temp, exist_ok=True)
         shutil.rmtree(self.build_exe, ignore_errors=True)
 
@@ -101,11 +117,10 @@ class build_exe(distutils.core.Command):
         for script in scripts:
             names.append(self._Freeze(script, self.build_temp, self.build_exe, py_options.copy()))
 
-        for name in names:
-            if name != names[0]:
-                self.moveTree(os.path.join(self.build_exe, name), os.path.join(self.build_exe, names[0]))
+        for name in names[1:]:
+            self.move_tree(os.path.join(self.build_exe, name), os.path.join(self.build_exe, names[0]))
 
-        self.moveTree(os.path.join(self.build_exe, names[0]), self.build_exe)
+        self.move_tree(os.path.join(self.build_exe, names[0]), self.build_exe)
 
         shutil.rmtree(self.build_temp, ignore_errors=True)
 
@@ -125,7 +140,7 @@ class build_exe(distutils.core.Command):
             if os.path.isdir(sourceDir):
                 setattr(self, attrName, sourceDir)
 
-    def moveTree(self, sourceRoot, destRoot):
+    def move_tree(self, sourceRoot, destRoot):
         if not os.path.exists(destRoot):
             return False
         ok = True
@@ -173,9 +188,10 @@ class build_exe(distutils.core.Command):
     def _Freeze(self, script, workpath, distpath, options):
         options['name'] = '.'.join(ntpath.basename(script).split('.')[:-1])
 
-        if type(script) is Executable:
+        executable = self._executables.pop(0)
+        if executable:
             # We need to apply the script-specific options
-            for option_name, script_option in script._options.iter():
+            for option_name, script_option in executable.options.items():
                 options[option_name] = script_option
 
         spec_file = PyInstaller.__main__.run_makespec([script], **options)
@@ -194,5 +210,9 @@ class Executable(object):
         self._options = {}
 
         for name in kwargs:
-            if name in MAKESPEC_ARGS:
+            if name in build_exe.makespec_args():
                 self._options[name] = kwargs[name]
+
+    @property
+    def options(self):
+        return self._options

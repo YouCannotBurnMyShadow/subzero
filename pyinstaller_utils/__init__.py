@@ -7,7 +7,7 @@ try:
 except ImportError:
     from setuptools import setup as distutils_setup
 
-from pyinstaller_utils.dist import build_exe
+from pyinstaller_utils.dist import build_exe, Executable
 from pyinstaller_utils.windist import bdist_msi
 
 # This file was originally taken from cx_Freeze by Anthony Tuininga, and is licensed under the  PSF license.

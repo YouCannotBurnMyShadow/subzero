@@ -10,7 +10,7 @@ from io import StringIO
 
 import PyRTF
 
-from pyinstaller_utils.dist import BUILD_DIR
+from pyinstaller_utils.dist import build_exe
 
 __all__ = ["bdist_msi"]
 
@@ -414,7 +414,7 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         if not build_found:
             raise EnvironmentError('Unable to identify build directory!')
 
-        self.bdist_dir = os.path.join(self.bdist_dir, BUILD_DIR)
+        self.bdist_dir = os.path.join(self.bdist_dir, build_exe.build_dir())
         self.height = 270
 
     def initialize_options(self):

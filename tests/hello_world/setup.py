@@ -1,6 +1,6 @@
 from setuptools import find_packages
 
-from pyinstaller_utils import setup
+from pyinstaller_utils import setup, Executable
 
 setup(name='hello_world',
       author='test_author',
@@ -9,7 +9,7 @@ setup(name='hello_world',
       entry_points={
           'console_scripts': [
               'my_project = hello_world.__main__:main',
-              'gui = hello_world.__main__:gui',
+              Executable('gui = hello_world.__main__:gui', icon_file='Sample.ico'),
           ]
       },
       options={
