@@ -45,13 +45,26 @@ In your setup function, you can specify PyInstaller options as follows:
           },
           'bdist_msi': {
               'upgrade_code': '{66620F3A-DC3A-11E2-B341-002219E9B01E}',
-              # 'initial_target_dir': r'[ProgramFiles64Folder]\{}\{}' % (company_name, product_name),
               'shortcuts': [
                   'ProgramMenuFolder\Hello World = my_project'
               ],
           }
   ...)
 ```
+In addition, options can be specified on a per-executable basis replacing each script or entry point with an instance
+of the Executable class and initializing it with the required options, as shown below:
+
+```python
+setup(...
+      entry_points={
+          'console_scripts': [
+              'my_project = hello_world.__main__:main',
+              Executable('gui = hello_world.__main__:gui', icon_file='Sample.ico'),
+          ]
+      },
+...)
+```
+
 The full array of options for build_exe is available in the PyInstaller documentation. Providing an upgrade code is
 **strongly recommended** for the bdist_msi command. A license agreement will be added to the installer if there is 
 a license text file in the same directory as setup.py.
