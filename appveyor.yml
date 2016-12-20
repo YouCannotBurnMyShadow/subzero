@@ -85,3 +85,6 @@ test_script:
   # if we're just updating the cache.
   - "if not \"%APPVEYOR_SCHEDULED_BUILD%\" == \"True\" (
     %CMD_IN_ENV% %TEST1_CMD% )"
+
+after_test:
+  - bash <(curl -s https://codecov.io/bash)
