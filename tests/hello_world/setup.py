@@ -1,6 +1,6 @@
 from setuptools import find_packages
 
-from pyinstaller_utils.dist import setup
+from pyinstaller_utils import setup
 
 setup(name='hello_world',
       author='test_author',

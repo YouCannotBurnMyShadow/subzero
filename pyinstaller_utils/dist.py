@@ -12,13 +12,23 @@ import PyInstaller.__main__
 from PyInstaller.building.makespec import main as makespec_main
 from pkg_resources import EntryPoint
 
-from pyinstaller_utils import build_dir
-from pyinstaller_utils.windist import bdist_msi
 
-try:
-    from distutils.core import setup as distutils_setup
-except ImportError:
-    from setuptools import setup as distutils_setup
+def get_makespec_args():
+    excluded_args = [
+        'scripts',
+    ]
+    names = []
+
+    for name, parameter in inspect.signature(makespec_main).parameters.items():
+        if name not in (excluded_args + ['args', 'kwargs']):
+            names.append(name)
+
+    return names
+
+
+MAKESPEC_ARGS = get_makespec_args()
+BUILD_DIR = "exe.{}-{}".format(distutils.util.get_platform(), sys.version[0:3])
+
 
 __all__ = ["build_exe", "setup"]
 
@@ -41,14 +51,14 @@ class build_exe(distutils.core.Command):
         self.build_exe = None
         self.datas = []  # signature does not detect datas for some reason
 
-        for name, parameter in inspect.signature(makespec_main).parameters.items():
-            if name not in (self._excluded_args + ['args', 'kwargs']) and not getattr(self, name, None):
+        for name in MAKESPEC_ARGS:
+            if not getattr(self, name, None):
                 setattr(self, name, None)
 
     def finalize_options(self):
         distutils.command.build.build.finalize_options(self)
         if self.build_exe is None:
-            self.build_exe = os.path.join(self.build_base, build_dir())
+            self.build_exe = os.path.join(self.build_base, BUILD_DIR)
 
     def run(self):
         metadata = self.distribution.metadata
@@ -84,9 +94,12 @@ class build_exe(distutils.core.Command):
         for entry_point in entry_points.values():
             scripts.append(self._GenerateScript(entry_point, self.build_temp))
 
+        py_options.setdefault('pathex', []).append(os.path.abspath(os.path.dirname(self.build_base)))
+        py_options.setdefault('hiddenimports', []).extend(self.distribution.packages +
+                                                          self.distribution.install_requires)
         names = []
         for script in scripts:
-            names.append(self._Freeze(script, self.build_temp, self.build_exe, py_options))
+            names.append(self._Freeze(script, self.build_temp, self.build_exe, py_options.copy()))
 
         for name in names:
             if name != names[0]:
@@ -158,9 +171,12 @@ class build_exe(distutils.core.Command):
         return script_path
 
     def _Freeze(self, script, workpath, distpath, options):
-        options.setdefault('pathex',[]).append(os.path.dirname(workpath))
-        options.setdefault('hiddenimports',[]).extend(self.distribution.packages + self.distribution.install_requires)
         options['name'] = '.'.join(ntpath.basename(script).split('.')[:-1])
+
+        if type(script) is Executable:
+            # We need to apply the script-specific options
+            for option_name, script_option in script._options.iter():
+                options[option_name] = script_option
 
         spec_file = PyInstaller.__main__.run_makespec([script], **options)
         PyInstaller.__main__.run_build(None, spec_file, noconfirm=True, workpath=workpath, distpath=distpath)
@@ -168,14 +184,15 @@ class build_exe(distutils.core.Command):
 
         return options['name']
 
-def _AddCommandClass(commandClasses, name, cls):
-    if name not in commandClasses:
-        commandClasses[name] = cls
 
-def setup(**attrs):
-    commandClasses = attrs.setdefault("cmdclass", {})
-    if sys.platform == "win32":
-        if sys.version_info[:2] >= (2, 5):
-            _AddCommandClass(commandClasses, "bdist_msi", bdist_msi)
-    _AddCommandClass(commandClasses, "build_exe", build_exe)
-    distutils_setup(**attrs)
+class Executable(object):
+    def __str__(self):
+        return self.script
+
+    def __init__(self, script, **kwargs):
+        self.script = script
+        self._options = {}
+
+        for name in kwargs:
+            if name in MAKESPEC_ARGS:
+                self._options[name] = kwargs[name]

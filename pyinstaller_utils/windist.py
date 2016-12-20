@@ -6,10 +6,49 @@ import distutils.util
 import msilib
 import ntpath
 import os
+from io import StringIO
 
-from pyinstaller_utils import build_dir, license_text
+import PyRTF
+
+from pyinstaller_utils.dist import BUILD_DIR
 
 __all__ = ["bdist_msi"]
+
+
+def license_text(license_file):
+    """
+    Generates rich text given a license file-like object
+    :param license_file: file-like object
+    :return:
+    """
+    wordpad_header = r'''{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1033{\fonttbl{\f0\fnil\fcharset255 Times New Roman;}
+{\*\generator Riched20 10.0.14393}\viewkind4\uc1'''.replace('\n', '\r\n')
+
+    r = PyRTF.Renderer()
+
+    doc = PyRTF.Document()
+    ss = doc.StyleSheet
+    sec = PyRTF.Section()
+    doc.Sections.append(sec)
+
+    is_blank = False
+    paragraph_text = ''
+    for line in license_file:
+        if not line or line.isspace():
+            is_blank = True
+        elif is_blank:
+            sec.append(paragraph_text)
+            is_blank = False
+            paragraph_text = line
+        else:
+            paragraph_text += ' ' + line
+
+    f = StringIO()
+    f.write(wordpad_header)
+    r.Write(doc, f)
+
+    return f.getvalue()
+
 
 # force the remove existing products action to happen first since Windows
 # installer appears to be braindead and doesn't handle files shared between
@@ -375,7 +414,7 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         if not build_found:
             raise EnvironmentError('Unable to identify build directory!')
 
-        self.bdist_dir = os.path.join(self.bdist_dir, build_dir())
+        self.bdist_dir = os.path.join(self.bdist_dir, BUILD_DIR)
         self.height = 270
 
     def initialize_options(self):

@@ -21,7 +21,7 @@ PyInstaller, making it trivial to install.
 In your setup file, replace the default setup import with the followng:
 
 ```python
-from pyinstaller_utils.dist import setup
+from pyinstaller_utils import setup
 ```
 
 Then run the following command:
