@@ -14,7 +14,7 @@ environment:
       # Break the tests into two runs, since together they exceed the 1 hour limit.
       # See https://github.com/pyinstaller/pyinstaller/issues/2024#issuecomment-224129520
       # for more discussion.
-      TEST1_CMD: "py.test --maxfail 5 --durations=10 tests"
+      TEST1_CMD: "py.test --cov=./ --maxfail 5 --durations=10 tests"
       TEST2_CMD: ""
 
     - PYTHON: "C:\\Python35"
@@ -24,21 +24,21 @@ environment:
       # Break the tests into two runs, since together they exceed the 1 hour limit.
       # See https://github.com/pyinstaller/pyinstaller/issues/2024#issuecomment-224129520
       # for more discussion.
-      TEST1_CMD: "py.test --maxfail 5 --durations=10 tests"
+      TEST1_CMD: "py.test --cov=./ --maxfail 5 --durations=10 tests"
       TEST2_CMD: ""
 
     - PYTHON: "C:\\Python34"
       PYTHON_VERSION: "3.4"
       PYTHON_ARCH: "32"
       VCVARSALL: "x86"
-      TEST1_CMD: "py.test --maxfail 5 --durations=10 tests"
+      TEST1_CMD: "py.test --cov=./ --maxfail 5 --durations=10 tests"
       TEST2_CMD: ""
 
     - PYTHON: "C:\\Python33"
       PYTHON_VERSION: "3.3"
       PYTHON_ARCH: "32"
       VCVARSALL: "x86"
-      TEST1_CMD: "py.test --maxfail 5 --durations=10 tests"
+      TEST1_CMD: "py.test --cov=./ --maxfail 5 --durations=10 tests"
       TEST2_CMD: ""
 
 cache:
@@ -87,4 +87,4 @@ test_script:
     %CMD_IN_ENV% %TEST1_CMD% )"
 
 after_test:
-  - bash <(curl -s https://codecov.io/bash)
+  - codecov
