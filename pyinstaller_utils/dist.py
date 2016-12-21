@@ -106,8 +106,9 @@ class build_exe(distutils.core.Command):
             py_options = {}
 
         scripts = self.distribution.scripts
-        os.makedirs(self.build_temp, exist_ok=True)
-        shutil.rmtree(self.build_exe, ignore_errors=True)
+        for required_directory in [self.build_temp, self.build_exe]:
+            shutil.rmtree(required_directory, ignore_errors=True)
+            os.makedirs(required_directory, exist_ok=True)
 
         for entry_point in entry_points.values():
             scripts.append(self._GenerateScript(entry_point, self.build_temp))
@@ -200,6 +201,11 @@ class build_exe(distutils.core.Command):
             # We need to apply the script-specific options
             for option_name, script_option in executable.options.items():
                 options[option_name] = script_option
+
+        try:
+            os.remove(os.path.join(options['specpath'], '{}.spec'.format(options['name'])))
+        except OSError:
+            pass
 
         spec_file = PyInstaller.__main__.run_makespec([script], **options)
         PyInstaller.__main__.run_build(None, spec_file, noconfirm=True, workpath=workpath, distpath=distpath)
