@@ -3,9 +3,9 @@ import sys
 import pyinstaller_utils.dist
 
 try:
-    from distutils.core import setup as distutils_setup
-except ImportError:
     from setuptools import setup as distutils_setup
+except ImportError:
+    from distutils.core import setup as distutils_setup
 
 from pyinstaller_utils.dist import build_exe, Executable
 from pyinstaller_utils.windist import bdist_msi
