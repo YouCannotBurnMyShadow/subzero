@@ -11,6 +11,7 @@ import sys
 import PyInstaller.__main__
 import pkg_resources
 from PyInstaller.building.makespec import main as makespec_main
+from PyInstaller.utils.hooks import collect_submodules
 from pkg_resources import EntryPoint
 
 __all__ = ["build_exe", "setup"]
@@ -35,6 +36,7 @@ class build_exe(distutils.core.Command):
     boolean_options = []
     _excluded_args = [
         'scripts',
+        'specpath',
     ]
     _executables = []
 
@@ -111,8 +113,13 @@ class build_exe(distutils.core.Command):
             scripts.append(self._GenerateScript(entry_point, self.build_temp))
 
         py_options.setdefault('pathex', []).append(os.path.abspath(os.path.dirname(self.build_base)))
-        py_options.setdefault('hiddenimports', []).extend(self.distribution.packages +
-                                                          self.distribution.install_requires)
+        py_options.setdefault('hiddenimports', []).extend(self.distribution.install_requires)
+
+        for package in self.distribution.packages:
+            py_options['hiddenimports'].extend(collect_submodules(package))
+
+        py_options['specpath'] = self.build_base
+
         names = []
         for script in scripts:
             names.append(self._Freeze(script, self.build_temp, self.build_exe, py_options.copy()))
