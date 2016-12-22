@@ -25,5 +25,5 @@ setup(
     platforms='any',
     keywords=['pyinstaller'],
     classifiers=[],
-    install_requires=['PyInstaller', 'PyRTF3'],
+    install_requires=['PyInstaller', 'PyRTF3', 'packaging'],
     )
