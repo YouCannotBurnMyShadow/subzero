@@ -6,6 +6,7 @@ import distutils.util
 import msilib
 import ntpath
 import os
+import re
 from io import StringIO
 
 import PyRTF
@@ -23,6 +24,9 @@ def license_text(license_file):
     """
     wordpad_header = r'''{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1033{\fonttbl{\f0\fnil\fcharset255 Times New Roman;}
 {\*\generator Riched20 10.0.14393}\viewkind4\uc1'''.replace('\n', '\r\n')
+    center_space = '            '
+
+    pattern = re.compile(r'{}\s*'.format(center_space))
 
     r = PyRTF.Renderer()
 
@@ -32,16 +36,30 @@ def license_text(license_file):
     doc.Sections.append(sec)
 
     is_blank = False
-    paragraph_text = ''
+    paragraph_text = ['']
     for line in license_file:
         if not line or line.isspace():
             is_blank = True
-        elif is_blank:
-            sec.append(paragraph_text)
+        if is_blank:
+            # first element of paragraph_text is left-aligned, subsequent elements are centered
+            is_centered = False
+            for sec_line in paragraph_text:
+                if is_centered:
+                    para_props = PyRTF.ParagraphPS(alignment=PyRTF.ParagraphPS.CENTER)
+                    p = PyRTF.Paragraph(ss.ParagraphStyles.Normal, para_props)
+                    p.append(sec_line)
+                    sec.append(p)
+                elif sec_line:  # first element may be nothing, but not whitespace
+                    sec.append(sec_line)
+                is_centered = True
             is_blank = False
-            paragraph_text = line
+            paragraph_text = ['']
+        if line.startswith(center_space):
+            paragraph_text.append(line.strip())
+            is_blank = True
         else:
-            paragraph_text += ' ' + line
+            paragraph_text[0] += ' ' + line
+            paragraph_text[0] = paragraph_text[0].strip()
 
     f = StringIO()
     f.write(wordpad_header)
