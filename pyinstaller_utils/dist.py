@@ -1,4 +1,4 @@
-# This file was originally taken from cx_Freeze by Anthony Tuininga, and is licensed under the  PSF license.
+# This file was originally taken from cx_freeze by Anthony Tuininga, and is licensed under the  PSF license.
 
 import distutils.command.build
 import distutils.version
@@ -7,7 +7,6 @@ import ntpath
 import os
 import shutil
 import sys
-from contextlib import suppress
 
 import PyInstaller.__main__
 import pkg_resources
@@ -15,6 +14,9 @@ from PyInstaller.building.makespec import main as makespec_main
 from PyInstaller.utils.hooks import collect_submodules
 from packaging import version
 from pkg_resources import EntryPoint
+
+if version.parse(sys.version[0:3]) >= version.parse('3.4'):
+    from contextlib import suppress
 
 __all__ = ["build_exe", "setup"]
 
@@ -113,31 +115,38 @@ class build_exe(distutils.core.Command):
             os.makedirs(required_directory, exist_ok=True)
 
         for entry_point in entry_points.values():
-            scripts.append(self._GenerateScript(entry_point, self.build_temp))
+            scripts.append(self._generate_script(entry_point, self.build_temp))
 
         lib_dirs = ['lib', 'lib{}'.format(self.build_dir()[3:])]
         for lib_dir in lib_dirs:
             shutil.rmtree(os.path.join(self.build_base, lib_dir), ignore_errors=True)
+
         self.run_command('build')
 
+        for default_option in ['pathex', 'hiddenimports', 'binaries']:
+            py_options.setdefault(default_option, [])
+
+        # by convention, all paths appended to py_options must be absolute
+        py_options['hiddenimports'].extend(self.distribution.install_requires)
         for lib_dir in lib_dirs:
             if os.path.isdir(os.path.join(self.build_base, lib_dir)):
-                py_options.setdefault('pathex', []).append(os.path.abspath(os.path.join(self.build_base, lib_dir)))
+                py_options['pathex'].append(os.path.abspath(os.path.join(self.build_base, lib_dir)))
 
         if not py_options['pathex']:
             raise ValueError('Unable to find lib directory!')
-
-        py_options.setdefault('hiddenimports', []).extend(self.distribution.install_requires)
 
         if version.parse(sys.version[0:3]) >= version.parse('3.4'):
             for package in self.distribution.packages:
                 py_options['hiddenimports'].extend(collect_submodules(package))
 
-        py_options['specpath'] = self.build_temp
+        py_options['specpath'] = os.path.abspath(self.build_temp)
+        py_options['pathex'].append(os.path.abspath(self.build_temp))
+
+        self.add_binaries(py_options)
 
         names = []
         for script in scripts:
-            names.append(self._Freeze(script, self.build_temp, self.build_exe, py_options.copy()))
+            names.append(self._freeze(script, self.build_temp, self.build_exe, py_options.copy()))
 
         for name in names[1:]:
             self.move_tree(os.path.join(self.build_exe, name), os.path.join(self.build_exe, names[0]))
@@ -150,17 +159,13 @@ class build_exe(distutils.core.Command):
         for name in names:
             shutil.rmtree(os.path.join(self.build_exe, name), ignore_errors=True)
 
-    def set_source_location(self, name, *pathParts):
-        envName = "%s_BASE" % name.upper()
-        attrName = name.lower()
-        sourceDir = getattr(self, attrName)
-        if sourceDir is None:
-            baseDir = os.environ.get(envName)
-            if baseDir is None:
-                return
-            sourceDir = os.path.join(baseDir, *pathParts)
-            if os.path.isdir(sourceDir):
-                setattr(self, attrName, sourceDir)
+    def add_binaries(self, options):
+        for pathex in options['pathex']:
+            for root, dirs, files in os.walk(pathex):
+                for file in files:
+                    if file.endswith(('.so', '.pyd')):
+                        options['binaries'].append(os.path.abspath(os.path.join(pathex, root, file)), file)
+
 
     def move_tree(self, sourceRoot, destRoot):
         if not os.path.exists(destRoot):
@@ -185,7 +190,7 @@ class build_exe(distutils.core.Command):
                 os.rmdir(path)
         return ok
 
-    def _GenerateScript(self, entry_point, workpath):
+    def _generate_script(self, entry_point, workpath):
         """
         Generates a script given an entry point.
         :param entry_point:
@@ -209,7 +214,7 @@ class build_exe(distutils.core.Command):
 
         return script_path
 
-    def _Freeze(self, script, workpath, distpath, options):
+    def _freeze(self, script, workpath, distpath, options):
         options['name'] = '.'.join(ntpath.basename(script).split('.')[:-1])
 
         executable = self._executables.pop(0)
@@ -218,8 +223,14 @@ class build_exe(distutils.core.Command):
             for option_name, script_option in executable.options.items():
                 options[option_name] = script_option
 
-        with suppress(OSError):
-            os.remove(os.path.join(options['specpath'], '{}.spec'.format(options['name'])))
+        if version.parse(sys.version[0:3]) >= version.parse('3.4'):
+            with suppress(OSError):
+                os.remove(os.path.join(options['specpath'], '{}.spec'.format(options['name'])))
+        else:
+            try:
+                os.remove(os.path.join(options['specpath'], '{}.spec'.format(options['name'])))
+            except OSError:
+                pass
 
         spec_file = PyInstaller.__main__.run_makespec([script], **options)
         PyInstaller.__main__.run_build(None, spec_file, noconfirm=True, workpath=workpath, distpath=distpath)

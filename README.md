@@ -21,7 +21,7 @@ PyInstaller, making it trivial to install.
 In your setup file, replace the default setup import with the followng:
 
 ```python
-from pyinstaller_utils import setup
+from pyinstaller_utils import setup, Executable
 ```
 
 Then run the following command:
@@ -41,7 +41,6 @@ In your setup function, you can specify PyInstaller options as follows:
               'hiddenimports': [],
               'pathex': [],
               'datas': [],
-              'icon_file': None,
           },
           'bdist_msi': {
               'upgrade_code': '{66620F3A-DC3A-11E2-B341-002219E9B01E}',
@@ -59,7 +58,7 @@ setup(...
       entry_points={
           'console_scripts': [
               'my_project = hello_world.__main__:main',
-              Executable('gui = hello_world.__main__:gui', icon_file='Sample.ico'),
+              Executable('gui = hello_world.__main__:gui', icon_file='Sample.ico', windowed=False),
           ]
       },
 ...)
@@ -72,3 +71,36 @@ a license text file in the same directory as setup.py.
 Note that PyInstaller Utils currently cannot create shortcuts that are not placed in a root system directory. In other 
 words, you can currently have a shortcut on the desktop of in the program menu but not in a folder on the desktop or in 
 a folder on the program menu. This may be resolved in the future if there is greater interest.
+
+## Cython (currently not in tests)
+
+Cython modules can also be built because PyInstaller Utils executes the builtin `build` command before calling 
+PyInstaller. The following is an example setup.py file for a Cython project:
+
+```python
+from setuptools import find_packages, Extension
+from pyinstaller_utils import setup
+
+setup(
+    name='hello_world',
+    author='test_author',
+    version='0.1.0',
+    packages=find_packages(),
+    entry_points={
+      'console_scripts': [
+          'my_project = hello_world.__main__:main',
+      ]
+    },
+    options={},
+    install_requires=[],
+    setup_requires=[
+        'setuptools>=18.0',
+        'cython',
+    ],
+    ext_modules=[
+        Extension(
+            'my_module',
+            sources=['my_module.pyx'],
+        )
+    ])
+```
