@@ -7,13 +7,14 @@ import ntpath
 import os
 import shutil
 import sys
+from contextlib import suppress
 
 import PyInstaller.__main__
 import pkg_resources
 from PyInstaller.building.makespec import main as makespec_main
 from PyInstaller.utils.hooks import collect_submodules
-from pkg_resources import EntryPoint
 from packaging import version
+from pkg_resources import EntryPoint
 
 __all__ = ["build_exe", "setup"]
 
@@ -114,14 +115,25 @@ class build_exe(distutils.core.Command):
         for entry_point in entry_points.values():
             scripts.append(self._GenerateScript(entry_point, self.build_temp))
 
-        py_options.setdefault('pathex', []).append(os.path.abspath(os.path.dirname(self.build_base)))
+        lib_dirs = ['lib', 'lib{}'.format(self.build_dir()[3:])]
+        for lib_dir in lib_dirs:
+            shutil.rmtree(os.path.join(self.build_base, lib_dir), ignore_errors=True)
+        self.run_command('build')
+
+        for lib_dir in lib_dirs:
+            if os.path.isdir(os.path.join(self.build_base, lib_dir)):
+                py_options.setdefault('pathex', []).append(os.path.abspath(os.path.join(self.build_base, lib_dir)))
+
+        if not py_options['pathex']:
+            raise ValueError('Unable to find lib directory!')
+
         py_options.setdefault('hiddenimports', []).extend(self.distribution.install_requires)
-        
-        if version.parse(sys.version.split(' ')[0]) >= version.parse('3.4'):
+
+        if version.parse(sys.version[0:3]) >= version.parse('3.4'):
             for package in self.distribution.packages:
                 py_options['hiddenimports'].extend(collect_submodules(package))
 
-        py_options['specpath'] = self.build_base
+        py_options['specpath'] = self.build_temp
 
         names = []
         for script in scripts:
@@ -181,6 +193,8 @@ class build_exe(distutils.core.Command):
         :return: The script location
         """
 
+        # note that build_scripts appears to work sporadically
+
         # entry_point.attrs is tuple containing function
         # entry_point.module_name is string representing module name
         # entry_point.name is string representing script name
@@ -204,10 +218,8 @@ class build_exe(distutils.core.Command):
             for option_name, script_option in executable.options.items():
                 options[option_name] = script_option
 
-        try:
+        with suppress(OSError):
             os.remove(os.path.join(options['specpath'], '{}.spec'.format(options['name'])))
-        except OSError:
-            pass
 
         spec_file = PyInstaller.__main__.run_makespec([script], **options)
         PyInstaller.__main__.run_build(None, spec_file, noconfirm=True, workpath=workpath, distpath=distpath)
