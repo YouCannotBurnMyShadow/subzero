@@ -1,27 +1,27 @@
-# pyinstaller_utils
+# subzero
 [![build status][2]][3]
-## What is Pyinstaller Utils?
+## What is Subzero?
 
-PyInstaller Utils allows you to rapidly deploy your [frozen][1] Python application with minimal effort and additional
-code. PyInstaller Utils does this by providing a simple and intuitive wrapper for PyInstaller coupled with an MSI
+Subzero allows you to rapidly deploy your [frozen][1] Python application with minimal effort and additional
+code. Subzero does this by providing a simple and intuitive wrapper for PyInstaller coupled with an MSI
 builder. With a few lines of code and a single command, you can go directly from Python code to a compiled MSI
-installer. In addition, PyInstaller Utils does not require any non-Python dependencies beyond those required by
+installer. In addition, Subzero does not require any non-Python dependencies beyond those required by
 PyInstaller, making it trivial to install.
 
 [1]: http://docs.python-guide.org/en/latest/shipping/freezing/
-[2]: https://ci.appveyor.com/api/projects/status/github/xoviat/pyinstaller_utils?branch=master&svg=true
+[2]: https://ci.appveyor.com/api/projects/status/github/xoviat/subzero?branch=master&svg=true
 [3]: https://ci.appveyor.com/project/xoviat/pyinstaller-utils
 
 ## How do I install it?
 
-    pip install pyinstaller_utils
+    pip install subzero
 
 ## How do I use it?
 
 In your setup file, replace the default setup import with the followng:
 
 ```python
-from pyinstaller_utils import setup, Executable
+from subzero import setup, Executable
 ```
 
 Then run the following command:
@@ -68,18 +68,18 @@ The full array of options for build_exe is available in the PyInstaller document
 **strongly recommended** for the bdist_msi command. A license agreement will be added to the installer if there is 
 a license text file in the same directory as setup.py.
 
-Note that PyInstaller Utils currently cannot create shortcuts that are not placed in a root system directory. In other 
+Note that Subzero currently cannot create shortcuts that are not placed in a root system directory. In other 
 words, you can currently have a shortcut on the desktop of in the program menu but not in a folder on the desktop or in 
 a folder on the program menu. This may be resolved in the future if there is greater interest.
 
 ## Cython (currently not in tests)
 
-Cython modules can also be built because PyInstaller Utils executes the builtin `build` command before calling 
+Cython modules can also be built because Subzero executes the builtin `build` command before calling 
 PyInstaller. The following is an example setup.py file for a Cython project:
 
 ```python
 from setuptools import find_packages, Extension
-from pyinstaller_utils import setup
+from subzero import setup
 
 setup(
     name='hello_world',
