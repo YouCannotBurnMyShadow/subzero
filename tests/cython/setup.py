@@ -1,6 +1,6 @@
 from setuptools import find_packages, Extension
 
-from pyinstaller_utils import setup
+from subzero import setup
 
 setup(
     name='hello_world',

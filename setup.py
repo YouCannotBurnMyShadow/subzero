@@ -11,12 +11,12 @@ VERSION = open(VERSION_PATH).read()
 LICENSE = open(LICENSE_PATH).readline().strip()
 
 setup(
-    name='pyinstaller_utils',
+    name='subzero',
     version=VERSION,
     description='PyInstaller setuptools integration',
     author='Mars Galactic',
     author_email='xoviat@users.noreply.github.com',
-    url='https://github.com/xoviat/pyinstaller_utils',
+    url='https://github.com/xoviat/subzero',
     packages=find_packages(),
     license=LICENSE,
     platforms='any',

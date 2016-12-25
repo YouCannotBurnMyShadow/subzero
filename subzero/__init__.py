@@ -1,14 +1,14 @@
 import sys
 
-import pyinstaller_utils.dist
+import subzero.dist
 
 try:
     from setuptools import setup as distutils_setup
 except ImportError:
     from distutils.core import setup as distutils_setup
 
-from pyinstaller_utils.dist import build_exe, Executable
-from pyinstaller_utils.windist import bdist_msi
+from subzero.dist import build_exe, Executable
+from subzero.windist import bdist_msi
 
 # This file was originally taken from cx_Freeze by Anthony Tuininga, and is licensed under the  PSF license.
 
@@ -30,4 +30,4 @@ def setup(**attrs):
     distutils_setup(**attrs)
 
 
-pyinstaller_utils.dist.setup = setup  # Backwards compatibility
+subzero.dist.setup = setup  # Backwards compatibility

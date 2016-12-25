@@ -11,7 +11,7 @@ from io import StringIO
 
 import PyRTF
 
-from pyinstaller_utils.dist import build_exe
+from subzero.dist import build_exe
 
 __all__ = ["bdist_msi"]
 

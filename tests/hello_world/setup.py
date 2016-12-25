@@ -1,6 +1,6 @@
 from setuptools import find_packages
 
-from pyinstaller_utils import setup, Executable
+from subzero import setup, Executable
 
 setup(
     name='hello_world',
