@@ -28,7 +28,7 @@ for(var strSubkey in arrSubKeys) {
         i++;
     }
 
-    if(upgradeCode == '{UpgradeCode}') {
+    if(upgradeCode == '{upgrade_code}') {
         var command = null;
         if(quietUninstallString)
             command = quietUninstallString;

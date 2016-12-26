@@ -6,10 +6,13 @@ import tempfile
 from multiprocessing import Process
 
 
-def run_setup_command(setup_command, arguments=[]):
+def change_dir():
     package_path = os.path.join(os.path.dirname(__file__), 'hello_world')
     os.chdir(package_path)
 
+
+def run_setup_command(setup_command, arguments=[]):
+    change_dir()
     sys.argv[1:] = [setup_command] + list(arguments)
 
     exec('\n'.join(open('setup.py')))
@@ -36,6 +39,8 @@ def test_bdist_msi():
     p = Process(target=run_setup_command, args=('bdist_msi', ['--skip-build'],))
     p.start()
     p.join()
+
+    change_dir()
 
     # find the location of the msi installer
     for f in os.listdir('dist'):

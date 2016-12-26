@@ -22,6 +22,7 @@ __all__ = ["build_exe", "setup"]
 
 
 # Monkeypatches yield_lines to accept executables
+# TODO: Patch in setup function rather than here
 def new_yield_lines(original_yield_lines):
     def yield_lines(strs):
         if type(strs) is Executable:
@@ -234,7 +235,7 @@ class build_exe(distutils.core.Command):
 
         spec_file = PyInstaller.__main__.run_makespec([script], **options)
         PyInstaller.__main__.run_build(None, spec_file, noconfirm=True, workpath=workpath, distpath=distpath)
-        os.remove(spec_file)
+        # os.remove(spec_file)
 
         return options['name']
 

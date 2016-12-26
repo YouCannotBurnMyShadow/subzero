@@ -113,7 +113,16 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                           'Installed and not Resume and not Preselected', 1250),
                          ('ProgressDlg', None, 1280)
                          ])
+        '''
+        if self.upgrade_code:
+            msilib.add_data(self.db, 'CustomAction',
+                            [('RemoveBurn', 37, None,
+                              resource_string('subzero.resources', 'remove_burn.js').format(
+                                  upgrade_code=self.upgrade_code))])
 
+            msilib.add_data(self.db, 'InstallExecuteSequence',
+                         [('DoAction', 'RemoveBurn', 402)])
+        '''
         # TODO: Add ability to pass arguments to executable
         # TODO: Validate shortcut values against known MSI table
         # TODO: Add ability to specify nested shortcuts
