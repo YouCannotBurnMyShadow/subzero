@@ -10,6 +10,7 @@ import re
 from io import StringIO
 
 import PyRTF
+from pkg_resources import resource_string
 
 from subzero.dist import build_exe
 
@@ -94,15 +95,66 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
     modeless = 1
     modal = 3
 
+    def _split_path(self, path):
+        folders = []
+        while 1:
+            path, folder = os.path.split(path)
+
+            if folder != "":
+                folders.append(folder)
+            else:
+                if path != "":
+                    folders.append(path)
+
+                break
+
+        folders.reverse()
+
+        return folders
+
     def add_config(self, fullname):
+        # TODO: Add ability to pass arguments to executable
+        # TODO: Validate shortcut values against known MSI table
+        # TODO: Add ability to specify nested shortcuts
+        for index, shortcut in enumerate(self.shortcuts):
+            shortcut = shortcut.split('=')
+            base_name = '{}.exe'.format(shortcut[1].strip())
+            shortcut_path = shortcut[0].strip()
+            shortcut_name = ntpath.basename(shortcut_path)
+            shortcut_dir = self._split_path(ntpath.dirname(shortcut_path))
+
+            assert len(shortcut_dir) >= 1
+
+            if len(shortcut_dir) == 1:
+                shortcut_dir = shortcut_dir[0]
+            else:
+                shortcut_dir_path = os.sep.join(shortcut_dir[1:])
+                shortcut_dir_name = 'S_DIR_{}'.format(index)
+                self.directories.append((shortcut_dir_path, shortcut_dir[0], shortcut_dir_name))
+                shortcut_dir = shortcut_dir_name
+
+            msilib.add_data(self.db, 'Shortcut',
+                            [('S_APP_{}'.format(index), shortcut_dir,
+                              shortcut_name, 'TARGETDIR',
+                              '[TARGETDIR]{}'.format(base_name), None, None, None,
+                              None, None, None, 'TARGETDIR')])
+
         if self.add_to_path:
             msilib.add_data(self.db, 'Environment',
                             [("E_PATH", "=-*Path", r"[~];[TARGETDIR]", "TARGETDIR")])
         if self.directories:
             msilib.add_data(self.db, "Directory", self.directories)
-        msilib.add_data(self.db, 'CustomAction',
-                        [("A_SET_TARGET_DIR", 256 + 51, "TARGETDIR",
-                          self.initial_target_dir)])
+
+        custom_actions = [("A_SET_TARGET_DIR", 256 + 51, "TARGETDIR",
+                           self.initial_target_dir)]
+
+        if self.upgrade_code:
+            custom_action = ('RemoveBurn', 37, None,
+                             resource_string('subzero.resources', 'remove_burn.js').decode().replace(
+                                 '%UPGRADE_CODE%', self.upgrade_code).replace('\n', '\r\n'))
+            custom_actions.append(custom_action)
+
+        msilib.add_data(self.db, 'CustomAction', custom_actions)
         msilib.add_data(self.db, 'InstallExecuteSequence',
                         [("A_SET_TARGET_DIR", 'TARGETDIR=""', 401)])
         msilib.add_data(self.db, 'InstallUISequence',
@@ -123,21 +175,6 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
             msilib.add_data(self.db, 'InstallExecuteSequence',
                          [('DoAction', 'RemoveBurn', 402)])
         '''
-        # TODO: Add ability to pass arguments to executable
-        # TODO: Validate shortcut values against known MSI table
-        # TODO: Add ability to specify nested shortcuts
-        for index, shortcut in enumerate(self.shortcuts):
-            shortcut = shortcut.split('=')
-            baseName = '{}.exe'.format(shortcut[1].strip())
-            shortcutPath = shortcut[0].strip()
-            shortcutName = ntpath.basename(shortcutPath)
-            shortcutDir = ntpath.dirname(shortcutPath)
-
-            msilib.add_data(self.db, 'Shortcut',
-                            [('S_APP_{}'.format(index), shortcutDir,
-                              shortcutName, 'TARGETDIR',
-                              '[TARGETDIR]{}'.format(baseName), None, None, None,
-                              None, None, None, 'TARGETDIR')])
 
         for tableName, data in self.data.items():
             msilib.add_data(self.db, tableName, data)
@@ -337,8 +374,9 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
 
             button = dialog.next('Next', 'Cancel', active=False)
             # button.event('SetTargetPath', 'TARGETDIR', ordering=1)
-            button.event('SpawnWaitDialog', 'WaitForCostingDlg', ordering=1)
-            button.event('EndDialog', 'Return', ordering=2)
+            # button.event('DoAction', 'RemoveBurn', ordering=1)
+            button.event('SpawnWaitDialog', 'WaitForCostingDlg', ordering=2)
+            button.event('EndDialog', 'Return', ordering=3)
             button.condition('Enable', 'LicenseAccepted')
             button.condition('Disable', 'Not LicenseAccepted')
 
