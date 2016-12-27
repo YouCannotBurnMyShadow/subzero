@@ -4,15 +4,15 @@ import os
 
 from setuptools import setup, find_packages
 
+import versioneer
+
 BASE_DIR = os.path.dirname(__file__)
-VERSION_PATH = os.path.join(BASE_DIR, 'VERSION')
 LICENSE_PATH = os.path.join(BASE_DIR, 'LICENSE')
-VERSION = open(VERSION_PATH).read()
 LICENSE = open(LICENSE_PATH).readline().strip()
 
 setup(
     name='subzero',
-    version=VERSION,
+    version=versioneer.get_version(),
     description='PyInstaller setuptools integration',
     author='Mars Galactic',
     author_email='xoviat@users.noreply.github.com',
