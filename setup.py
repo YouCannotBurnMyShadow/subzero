@@ -23,5 +23,6 @@ setup(
     keywords=['pyinstaller'],
     classifiers=[],
     install_requires=['PyInstaller', 'PyRTF3', 'packaging'],
+    cmdclass=versioneer.get_cmdclass(),
     setup_requires=['setuptools-markdown'],
     long_description_markdown_filename='README.md')
