@@ -11,6 +11,7 @@ import shutil
 from io import StringIO
 
 import PyRTF
+import lxml.etree as le
 import pywix
 from pkg_resources import resource_filename
 
@@ -158,6 +159,20 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                 self.license_text = self._license_text(open(file))
                 break
 
+    def _compile(self, names, out):
+        candle_arguments = ['candle', '-arch', 'x64']
+        light_arguments = ['light', '-ext', 'WixUIExtension', '-cultures:en-us']
+
+        for name in names:
+            candle_arguments.append('{}.wxs'.format(name))
+            light_arguments.append('{}.wixobj'.format(name))
+
+        light_arguments.extend(['-out', out])
+
+        for args in [candle_arguments, light_arguments]:
+            pywix.call_wix_command(args)
+
+
     def run(self):
         # self.skip_build = True
         if not self.skip_build:
@@ -175,25 +190,42 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
             self.product_code = msilib.gen_uuid()
 
         current_directory = os.getcwd()
+        # Resolve all directory names here
+        build_temp = os.path.abspath(self.build_temp)
+        bdist_dir = os.path.abspath(self.bdist_dir)
+        target_name = os.path.abspath(self.target_name)
+        files = [
+            'Product',
+        ]
 
-        shutil.copy(resource_filename('subzero.resources', 'Product.wxs'), self.build_temp)
-        print(pywix.call_wix_command(['heat', 'dir', self.bdist_dir, '-gg', '-sfrag', '-sreg',
-                                      '-out', os.path.join(self.build_temp, 'Directory.wxs')]))
-
-        files = ['Product.wxs', 'Directory.wxs']
-
-        candle_arguments = ['candle']
         for file in files:
-            candle_arguments.append(file)
+            shutil.copy(resource_filename('subzero.resources', '{}.wxs'.format(file)), self.build_temp)
 
-        light_arguments = ['light']
-        for file in files:
-            light_arguments.append('{}.wixobj'.format(os.path.splitext(file)[0]))
+        shutil.copy(resource_filename('subzero.resources', 'HeatTransform.xslt'), self.build_temp)
 
-        light_arguments.extend(['-out', os.path.join(current_directory, self.target_name)])
+        files.extend([
+            'Directory',
+        ])
 
-        os.chdir(self.build_temp)
-        print(pywix.call_wix_command(candle_arguments))
-        print(pywix.call_wix_command(light_arguments))
+        os.chdir(build_temp)
+        os.environ['bdist_dir'] = bdist_dir
+        print(pywix.call_wix_command(['heat', 'dir', bdist_dir, '-cg', 'ApplicationFiles',
+                                      '-gg', '-sfrag', '-sreg', '-dr', 'INSTALLDIR', '-var', 'env.bdist_dir',
+                                      '-t', 'HeatTransform.xslt', '-out', 'Directory.wxs']))
+
+        # we need to remove the root directory that heat puts in
+        doc = le.parse('Directory.wxs')
+        elems = doc.xpath('//*[@Name="{}"]'.format(os.path.basename(self.bdist_dir)))
+        assert len(elems) == 1
+        elem = elems[0]
+        parent = elem.getparent()
+        parent.remove(elem)
+        for child in elem:
+            parent.append(child)
+
+        with open('Directory.wxs', 'wb+') as f:
+            f.write(le.tostring(doc, pretty_print=True))
+
+        self._compile(files, target_name)
 
         os.chdir(current_directory)

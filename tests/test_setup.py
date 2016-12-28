@@ -3,16 +3,11 @@ import subprocess
 import sys
 import tempfile
 
-from multiprocessing import Process
 
-
-def change_dir():
+def run_setup_command(setup_command, arguments=[]):
     package_path = os.path.join(os.path.dirname(__file__), 'hello_world')
     os.chdir(package_path)
 
-
-def run_setup_command(setup_command, arguments=[]):
-    change_dir()
     sys.argv[1:] = [setup_command] + list(arguments)
 
     exec('\n'.join(open('setup.py')))
@@ -35,12 +30,7 @@ def test_hello_world():
 
 
 def test_bdist_msi():
-    # Needed because MSIlib does not automatically close file locks
-    p = Process(target=run_setup_command, args=('bdist_msi', ['--skip-build'],))
-    p.start()
-    p.join()
-
-    change_dir()
+    run_setup_command('bdist_msi', ['--skip-build'])
 
     # find the location of the msi installer
     for f in os.listdir('dist'):
@@ -55,6 +45,6 @@ def test_bdist_msi():
 
     subprocess.call(MSIEXEC_COMMAND.split(' '))
 
-    output = subprocess.check_output([os.path.join(dest_dir, 'my_project.exe')])
+    output = subprocess.check_output([os.path.join(dest_dir, 'Mars Galactic', 'Hello World', 'my_project.exe')])
 
     assert output == b'Script executed successfully!\r\n'
