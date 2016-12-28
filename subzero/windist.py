@@ -8,6 +8,7 @@ import ntpath
 import os
 import re
 import shutil
+import uuid
 from io import StringIO
 
 import PyRTF
@@ -21,6 +22,8 @@ __all__ = ["bdist_msi"]
 
 
 class bdist_msi(distutils.command.bdist_msi.bdist_msi):
+    _shortcut_components = []
+
     user_options = distutils.command.bdist_msi.bdist_msi.user_options + [
         ('add-to-path=', None, 'add target dir to PATH environment variable'),
         ('upgrade-code=', None, 'upgrade code to use'),
@@ -159,6 +162,102 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                 self.license_text = self._license_text(open(file))
                 break
 
+    def _generate_id(self):
+        return 'cmp{}'.format(str(uuid.uuid1()).replace('-', '').upper())
+
+    def _generate_element(self, directory, subdirs={}):
+        element = le.Element('Directory', {
+            'Name': directory,
+            'Id': self._generate_id(),
+        })
+
+        for name, subdir in subdirs.items():
+            if type(subdir) is dict:
+                element.append(self._generate_element(name, subdir))
+            else:
+                component_id = self._generate_id()
+                self._shortcut_components.append(component_id)
+                component = le.Element('Component', {
+                    'Id': component_id,
+                    'Guid': '*',
+                })
+                component.append(le.Element('Shortcut', {
+                    'Id': self._generate_id(),
+                    'Name': name,
+                    'Target': '[INSTALLDIR]{}.exe'.format(subdir),
+                    'WorkingDirectory': 'INSTALLDIR',
+                }))
+                component.append(le.Element('RegistryValue', {
+                    'Root': 'HKCU',
+                    'Key': 'Software\Microsoft\{{{}}}'.format(str(uuid.uuid1())),
+                    'Name': 'installed',
+                    'Type': 'integer',
+                    'Value': str(1),
+                    'KeyPath': 'yes',
+                }))
+                element.append(component)
+
+        return element
+
+    def _generate_shortcuts(self):
+        # The first order of business to to generate a unified directory tree
+        tree = {}
+        for shortcut in self.shortcuts:
+            shortcut = shortcut.split('=')
+            shortcut_target = shortcut[1].strip()
+            shortcut_dirs = self._split_path(os.path.dirname(shortcut[0].strip()))
+            shortcut_name = os.path.basename(shortcut[0].strip())  # not efficient, but more readable
+
+            subtree = tree
+            for shortcut_dir in shortcut_dirs:
+                subtree.setdefault(shortcut_dir, {})
+                subtree = subtree[shortcut_dir]
+
+            subtree[shortcut_name] = shortcut_target
+
+        # <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"><Fragment><DirectoryRef Id="INSTALLDIR">
+        Wix = le.Element('Wix', {
+            'xmlns': 'http://schemas.microsoft.com/wix/2006/wi',
+        })
+        Fragment = le.Element('Fragment')
+        DirectoryRef = le.Element('DirectoryRef', {
+            'Id': 'TARGETDIR',
+        })
+
+        Wix.append(Fragment)
+        Fragment.append(DirectoryRef)
+
+        for name, subdirs in tree.items():
+            DirectoryRef.append(self._generate_element(name, subdirs))
+
+        Fragment = le.Element('Fragment')
+        ComponentGroup = le.Element('ComponentGroup', {
+            'Id': 'ApplicationShortcuts',
+        })
+        for shortcut_component in self._shortcut_components:
+            ComponentGroup.append(le.Element('ComponentRef', {
+                'Id': shortcut_component,
+            }))
+
+        Wix.append(Fragment)
+        Fragment.append(ComponentGroup)
+
+        with open('Shortcuts.wxs', 'wb+') as f:
+            f.write(le.tostring(Wix, pretty_print=True))
+
+    def _repair_harvest(self):
+        doc = le.parse('Directory.wxs')
+        elems = doc.xpath('//*[@Name="{}"]'.format(os.path.basename(self.bdist_dir)))
+        assert len(elems) == 1
+        elem = elems[0]
+        parent = elem.getparent()
+        parent.remove(elem)
+        for child in elem:
+            parent.append(child)
+
+        with open('Directory.wxs', 'wb+') as f:
+            f.write(le.tostring(doc, pretty_print=True))
+
     def _compile(self, names, out):
         candle_arguments = ['candle', '-arch', 'x64']
         light_arguments = ['light', '-ext', 'WixUIExtension', '-cultures:en-us']
@@ -212,6 +311,7 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
 
         files.extend([
             'Directory',
+            'Shortcuts',
         ])
 
         os.chdir(build_temp)
@@ -221,18 +321,8 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                                       '-t', 'HeatTransform.xslt', '-out', 'Directory.wxs']))
 
         # we need to remove the root directory that heat puts in
-        doc = le.parse('Directory.wxs')
-        elems = doc.xpath('//*[@Name="{}"]'.format(os.path.basename(self.bdist_dir)))
-        assert len(elems) == 1
-        elem = elems[0]
-        parent = elem.getparent()
-        parent.remove(elem)
-        for child in elem:
-            parent.append(child)
-
-        with open('Directory.wxs', 'wb+') as f:
-            f.write(le.tostring(doc, pretty_print=True))
-
+        self._repair_harvest()
+        self._generate_shortcuts()
         self._compile(files, target_name)
 
         os.chdir(current_directory)

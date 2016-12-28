@@ -1,5 +1,6 @@
 # subzero
 [![build status][2]][3]
+[![Codecov][5]][4]
 ## What is Subzero?
 
 Subzero allows you to rapidly deploy your [frozen][1] Python application with minimal effort and additional
@@ -11,6 +12,8 @@ PyInstaller, making it trivial to install.
 [1]: http://docs.python-guide.org/en/latest/shipping/freezing/
 [2]: https://ci.appveyor.com/api/projects/status/github/xoviat/subzero?branch=master&svg=true
 [3]: https://ci.appveyor.com/project/xoviat/pyinstaller-utils
+[4]: https://codecov.io/gh/xoviat/subzero
+[5]: https://img.shields.io/codecov/c/github/codecov/example-python.svg?style=plastic
 
 ## How do I install it?
 

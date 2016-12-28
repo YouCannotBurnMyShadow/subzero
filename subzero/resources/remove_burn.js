@@ -52,7 +52,7 @@ for (j = 0; j < Keys.Names.length; j++){
         }
     }
 
-    if(BundleUpgradeCode.toUpperCase() == "%UPGRADE_CODE%".toUpperCase()) {
+    if(BundleUpgradeCode.toUpperCase() == "{upgrade_code}".toUpperCase()) {
         var command = null;
         if(QuietUninstallString)
             command = QuietUninstallString;
