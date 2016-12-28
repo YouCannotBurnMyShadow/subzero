@@ -22,7 +22,7 @@ setup(
     platforms='any',
     keywords=['pyinstaller'],
     classifiers=[],
-    install_requires=['PyInstaller', 'PyRTF3', 'packaging'],
+    install_requires=['PyInstaller', 'PyRTF3', 'packaging', 'pywix'],
     cmdclass=versioneer.get_cmdclass(),
     setup_requires=['setuptools-markdown'],
     long_description_markdown_filename='README.md')
