@@ -189,6 +189,13 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         if self.product_code is None:
             self.product_code = msilib.gen_uuid()
 
+        try:
+            shutil.rmtree(self.build_temp)
+        except OSError:
+            pass
+
+        os.makedirs(self.build_temp, exist_ok=True)
+
         current_directory = os.getcwd()
         # Resolve all directory names here
         build_temp = os.path.abspath(self.build_temp)
