@@ -24,11 +24,16 @@
 
         <InstallExecuteSequence>
             <RemoveExistingProducts After="InstallValidate"/>
+            <!--<Custom Action="RemoveBurnCustomAction" Before="InstallValidate"/>-->
         </InstallExecuteSequence>
 
         <Feature Id="DefaultFeature" Level="1">
             <ComponentGroupRef Id="ApplicationShortcuts"/>
             <ComponentGroupRef Id="ApplicationFiles"/>
         </Feature>
+
+        <Binary Id="CustomActionScript" SourceFile="remove_burn.js"/>
+        <CustomAction Id="RemoveBurnCustomAction" BinaryKey="CustomActionScript"
+                      JScriptCall="removeBurn" Execute="immediate" Return="check"/>
     </Product>
 </Wix>

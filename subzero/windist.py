@@ -14,7 +14,7 @@ from io import StringIO
 import PyRTF
 import lxml.etree as le
 import pywix
-from pkg_resources import resource_filename
+from pkg_resources import resource_filename, resource_string
 
 from subzero.dist import build_exe
 
@@ -334,6 +334,9 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
             shutil.copy(resource_filename('subzero.resources', '{}.wxs'.format(file)), self.build_temp)
 
         shutil.copy(resource_filename('subzero.resources', 'HeatTransform.xslt'), self.build_temp)
+        with open(os.path.join(self.build_temp, 'remove_burn.js'), 'w+') as f:
+            f.write(resource_string('subzero.resources', 'remove_burn.js').decode()
+                    .replace('upgrade_code', self.upgrade_code).replace('\n', '\r\n'))
 
         files.extend([
             'Directory',
