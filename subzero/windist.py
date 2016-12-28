@@ -165,11 +165,17 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
     def _generate_id(self):
         return 'cmp{}'.format(str(uuid.uuid1()).replace('-', '').upper())
 
-    def _generate_element(self, directory, subdirs={}):
-        element = le.Element('Directory', {
-            'Name': directory,
-            'Id': self._generate_id(),
-        })
+    def _generate_element(self, directory, subdirs={}, root=False):
+        if root:
+            attr = {
+                'Id': directory,
+            }
+        else:
+            attr = {
+                'Name': directory,
+                'Id': self._generate_id(),
+            }
+        element = le.Element('Directory', attr)
 
         for name, subdir in subdirs.items():
             if type(subdir) is dict:
@@ -228,7 +234,7 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         Fragment.append(DirectoryRef)
 
         for name, subdirs in tree.items():
-            DirectoryRef.append(self._generate_element(name, subdirs))
+            DirectoryRef.append(self._generate_element(name, subdirs, True))
 
         Fragment = le.Element('Fragment')
         ComponentGroup = le.Element('ComponentGroup', {
