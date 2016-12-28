@@ -39,7 +39,7 @@ In your setup function, you can specify PyInstaller options as follows:
 
 ```python
   setup(...
-  options={
+        options={
 '         build_exe': {
               'hiddenimports': [],
               'pathex': [],
