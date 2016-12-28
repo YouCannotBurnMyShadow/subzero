@@ -3,11 +3,11 @@
 import distutils.command.bdist_msi
 import distutils.errors
 import distutils.util
-import msilib
 import ntpath
 import os
 import re
 import shutil
+import string
 import uuid
 from io import StringIO
 
@@ -258,9 +258,36 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         with open('Directory.wxs', 'wb+') as f:
             f.write(le.tostring(doc, pretty_print=True))
 
+    def _generate_globals(self):
+        metadata = self.distribution.metadata
+        author = metadata.author or metadata.maintainer or "UNKNOWN"
+        version = metadata.get_version()
+        fullname = self.distribution.get_name()
+
+        variables = {
+            'ProductVersion': version,
+            'ProductUpgradeCode': self.upgrade_code,
+            'ProductName': string.capwords(' '.join(fullname.replace('-', '_').split('_'))),
+            'Author': author,
+        }
+
+        # horrible way to do this, but etree doesn't support question marks
+        xml = ['<?xml version="1.0" encoding="utf-8"?>', '<Include>']
+
+        for name, variable in variables.items():
+            xml.append('<?define {} = "{}" ?>'.format(name, variable))
+
+        xml.append('</Include>')
+
+        with open('Globals.wxs', 'w+') as f:
+            f.write('\n'.join(xml))
+
     def _compile(self, names, out):
+        with open('License.rtf', 'w+') as license_file:
+            license_file.write(self.license_text)
+
         candle_arguments = ['candle', '-arch', 'x64']
-        light_arguments = ['light', '-ext', 'WixUIExtension', '-cultures:en-us']
+        light_arguments = ['light', '-ext', 'WixUIExtension', '-cultures:en-us', '-dWixUILicenseRtf=License.rtf']
 
         for name in names:
             candle_arguments.append('{}.wxs'.format(name))
@@ -278,15 +305,8 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
             self.run_command('build_exe')
 
         self.mkpath(self.dist_dir)
-        fullname = self.distribution.get_fullname()
         if os.path.exists(self.target_name):
             os.unlink(self.target_name)
-        metadata = self.distribution.metadata
-        author = metadata.author or metadata.maintainer or "UNKNOWN"
-        version = metadata.get_version()
-        sversion = "%d.%d.%d" % distutils.version.StrictVersion(version).version
-        if self.product_code is None:
-            self.product_code = msilib.gen_uuid()
 
         try:
             shutil.rmtree(self.build_temp)
@@ -323,6 +343,13 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         # we need to remove the root directory that heat puts in
         self._repair_harvest()
         self._generate_shortcuts()
+        self._generate_globals()
         self._compile(files, target_name)
+
+        wixpdb_name = '{}.wixpdb'.format(os.path.splitext(target_name)[0])
+        try:
+            shutil.move(wixpdb_name, build_temp)
+        except OSError:
+            pass
 
         os.chdir(current_directory)
