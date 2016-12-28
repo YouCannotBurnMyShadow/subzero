@@ -13,7 +13,7 @@ PyInstaller, making it trivial to install.
 [2]: https://ci.appveyor.com/api/projects/status/github/xoviat/subzero?branch=master&svg=true
 [3]: https://ci.appveyor.com/project/xoviat/pyinstaller-utils
 [4]: https://codecov.io/gh/xoviat/subzero
-[5]: https://img.shields.io/codecov/c/github/codecov/example-python.svg?style=plastic
+[5]: https://img.shields.io/codecov/c/github/xoviat/subzero.svg?style=flat
 
 ## How do I install it?
 
