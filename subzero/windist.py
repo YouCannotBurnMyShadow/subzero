@@ -277,16 +277,13 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
             'Author': author,
         }
 
-        # horrible way to do this, but etree doesn't support question marks
-        xml = ['<?xml version="1.0" encoding="utf-8"?>', '<Include>']
+        include = le.Element('Include')
 
         for name, variable in variables.items():
-            xml.append('<?define {} = "{}" ?>'.format(name, variable))
+            include.append(le.ProcessingInstruction('define', '{} = "{}"'.format(name, variable)))
 
-        xml.append('</Include>')
-
-        with open('Globals.wxs', 'w+') as f:
-            f.write('\n'.join(xml))
+        with open('Globals.wxs', 'wb+') as f:
+            f.write(le.tostring(include, pretty_print=True))
 
     def _compile(self, names, out):
         with open('License.rtf', 'w+') as license_file:
