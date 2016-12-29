@@ -85,6 +85,18 @@ function decimalToHexString(number) {
     return number.toString(16).toUpperCase();
 }
 
+function ensureValue(Result, strKeyPath, Key, Name, objShell){
+    if(!Result) {
+        // oReg did not provide the result, so we must get it ourselves
+        Result = objShell.RegRead("HKLM\\" + strKeyPath + "\\" + Key + "\\" + Name);
+        try{
+            Result = VBArray(Result).toArray().join();
+        } catch (e) {}
+    }
+
+    return Result
+}
+
 function _removeBurn() {
     var HKEY_CLASSES_ROOT = 0x80000000;
     var HKEY_CURRENT_USER = 0x80000001;
@@ -105,7 +117,7 @@ function _removeBurn() {
     var BundleUpgradeCode;
     var UninstallString;
     var QuietUninstallString;
-    var objShell = CreateObject("WScript.Shell");
+    var objShell = new ActiveXObject("WScript.Shell");
     var Keys = regGetChildKeys(HKEY_LOCAL_MACHINE, strKeyPath);
 
     for (j = 0; j < Keys.Names.length; j++){
@@ -116,23 +128,15 @@ function _removeBurn() {
 
         for (i = 0; i < Values.Names.length; i++) {
             if ((Values.Types[i] == REG_SZ)|| (Values.Types[i] == REG_MULTI_SZ)) {
-                if(!Values.Results[i]) {
-                    // oReg did not provide the result, so we must get it ourselves
-                    Values.Results[i] = objShell.RegRead("HKLM\\" + strKeyPath + "\\" + Keys.Names[j] + "\\" + Values.Names[i]);
-                    try{
-                        Values.Results[i] = VBArray(Values.Results[i]).toArray().join();
-                    } catch (e) {}
-                }
-
                 switch(Values.Names[i]) {
                     case "BundleUpgradeCode":
-                         BundleUpgradeCode = Values.Results[i];
+                         BundleUpgradeCode = ensureValue(Values.Results[i], strKeyPath, Keys.Names[j], Values.Names[i], objShell);
                          break;
                     case "UninstallString":
-                        UninstallString = Values.Results[i];
+                        UninstallString = ensureValue(Values.Results[i], strKeyPath, Keys.Names[j], Values.Names[i], objShell)
                         break;
                     case "QuietUninstallString":
-                        QuietUninstallString = Values.Results[i];
+                        QuietUninstallString = ensureValue(Values.Results[i], strKeyPath, Keys.Names[j], Values.Names[i], objShell);
                         break;
                 }
             }
