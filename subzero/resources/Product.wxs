@@ -16,8 +16,8 @@
 
         <Directory Id="TARGETDIR" Name="SourceDir">
             <Directory Id="ProgramFiles64Folder">
-                <Directory Id="ProgramFilesContainer" Name="Mars Galactic">
-                    <Directory Id="INSTALLDIR" Name="Hello World"/>
+                <Directory Id="ProgramFilesContainer" Name="$(var.Author)">
+                    <Directory Id="INSTALLDIR" Name="$(var.ProductName)"/>
                 </Directory>
             </Directory>
         </Directory>
