@@ -197,13 +197,7 @@ function regGetChildValues(regRoot, strRegPath) {
     }
     var aResults = [];
     for (i = 0; i < aNames.length; i++) {
-        objMethod = objReg.Methods_.Item("GetStringValue");
-        objInParam = objMethod.InParameters.SpawnInstance_();
-        objInParam.hDefKey = regRoot;
-        objInParam.sSubKeyName = strRegPath;
-        objInParam.sValueName = aNames[i];
-        objOutParam = objReg.ExecMethod_(objMethod.Name, objInParam);
-        aResults.push(objOutParam.sValue);
+        aResults.push(null);
     }
   return { Results: aResults, Names: aNames, Types: aTypes };
 }
