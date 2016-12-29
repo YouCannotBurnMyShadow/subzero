@@ -4,7 +4,7 @@ from subzero import setup, Executable
 
 setup(
     name='hello_world',
-    author='test_author',
+    author='Mars Galactic',
     version='0.1.0',
     packages=find_packages(),
     entry_points={
