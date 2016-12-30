@@ -22,8 +22,6 @@ __all__ = ["bdist_msi"]
 
 
 class bdist_msi(distutils.command.bdist_msi.bdist_msi):
-    _shortcut_components = []
-
     user_options = distutils.command.bdist_msi.bdist_msi.user_options + [
         ('add-to-path=', None, 'add target dir to PATH environment variable'),
         ('upgrade-code=', None, 'upgrade code to use'),
@@ -162,10 +160,15 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                 self.license_text = self._license_text(open(file))
                 break
 
-    def _generate_id(self):
+    @staticmethod
+    def _generate_id():
         return 'cmp{}'.format(str(uuid.uuid1()).replace('-', '').upper())
 
-    def _generate_element(self, directory, subdirs={}, root=False):
+    @staticmethod
+    def _generate_bool(bool):
+        return 'yes' if bool else 'no'
+
+    def _generate_element(self, directory, subdirs={}, component_group=None, root=False):
         if root:
             attr = {
                 'Id': directory,
@@ -179,10 +182,9 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
 
         for name, subdir in subdirs.items():
             if type(subdir) is dict:
-                element.append(self._generate_element(name, subdir))
+                element.append(self._generate_element(name, subdir, component_group))
             else:
                 component_id = self._generate_id()
-                self._shortcut_components.append(component_id)
                 component = le.Element('Component', {
                     'Id': component_id,
                     'Guid': '*',
@@ -195,13 +197,18 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                 }))
                 component.append(le.Element('RegistryValue', {
                     'Root': 'HKCU',
-                    'Key': 'Software\Microsoft\{{{}}}'.format(str(uuid.uuid1())),
-                    'Name': 'installed',
-                    'Type': 'integer',
-                    'Value': str(1),
-                    'KeyPath': 'yes',
+                    'Key': 'Software\$(var.Author)\$(var.ProductName)',
+                    'Name': '{{{}}}'.format(str(uuid.uuid1())),
+                    'Type': 'string',
+                    'Value': 'installed',
+                    'KeyPath': self._generate_bool(True),
                 }))
                 element.append(component)
+
+                if component_group is not None:
+                    component_group.append(le.Element('ComponentRef', {
+                        'Id': component_id,
+                    }))
 
         return element
 
@@ -222,34 +229,30 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
             subtree[shortcut_name] = shortcut_target
 
         # <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"><Fragment><DirectoryRef Id="INSTALLDIR">
-        Wix = le.Element('Wix', {
+        wix = le.Element('Wix', {
             'xmlns': 'http://schemas.microsoft.com/wix/2006/wi',
         })
-        Fragment = le.Element('Fragment')
-        DirectoryRef = le.Element('DirectoryRef', {
+
+        for i in range(2):
+            wix.append(le.Element('Fragment'))
+
+        directory_ref = le.Element('DirectoryRef', {
             'Id': 'TARGETDIR',
         })
+        wix[0].append(directory_ref)
 
-        Wix.append(Fragment)
-        Fragment.append(DirectoryRef)
-
-        for name, subdirs in tree.items():
-            DirectoryRef.append(self._generate_element(name, subdirs, True))
-
-        Fragment = le.Element('Fragment')
-        ComponentGroup = le.Element('ComponentGroup', {
+        component_group = le.Element('ComponentGroup', {
             'Id': 'ApplicationShortcuts',
         })
-        for shortcut_component in self._shortcut_components:
-            ComponentGroup.append(le.Element('ComponentRef', {
-                'Id': shortcut_component,
-            }))
+        wix[1].append(component_group)
 
-        Wix.append(Fragment)
-        Fragment.append(ComponentGroup)
+        for name, subdirs in tree.items():
+            directory_ref.append(self._generate_element(name, subdirs, component_group, True))
+
+        wix.insert(0, le.ProcessingInstruction('include', 'Globals.wxs'))
 
         with open('Shortcuts.wxs', 'wb+') as f:
-            f.write(le.tostring(Wix, pretty_print=True))
+            f.write(le.tostring(wix, pretty_print=True))
 
     def _repair_harvest(self):
         doc = le.parse('Directory.wxs')
