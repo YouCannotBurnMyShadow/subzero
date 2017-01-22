@@ -209,13 +209,15 @@ class build_exe(distutils.core.Command):
                 elif not in_header:
                     top_packages[pathlib.Path(line).parts[0].strip()] = root
                     if line.endswith('.dll') or line.endswith('.pyd'):
-                        options['pathex'].append(os.path.dirname(os.path.join(root, line)))
+                        options['pathex'].append(os.path.dirname(os.path.join(root, line.strip())))
 
         for top_package, root in top_packages.items():
             with suppress(ImportError, ValueError, AttributeError):
                 if importlib.util.find_spec(top_package) is not None:
                     options['hiddenimports'].extend(collect_submodules(top_package))
                     options['pathex'].append(root)
+
+        options['pathex'] = list(set(options['pathex']))
 
 
     @staticmethod
