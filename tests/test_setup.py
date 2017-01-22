@@ -31,7 +31,7 @@ def test_hello_world():
     assert output == b'Script executed successfully!\r\n'
 
 
-@pytest.mark.skipif(sys.version_info < (3, 4), reason='PyQt5 requires Python 3.4.')
+@pytest.mark.xfail
 def test_imports():
     run_setup_command('qt', 'build_exe')
 
