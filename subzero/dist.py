@@ -7,6 +7,7 @@ import inspect
 import json
 import ntpath
 import os
+import pathlib
 import shutil
 import subprocess
 import sys
@@ -60,22 +61,6 @@ class build_exe(distutils.core.Command):
     @staticmethod
     def build_dir():
         return "exe.{}-{}".format(distutils.util.get_platform(), sys.version[0:3])
-
-    @staticmethod
-    def split_all(path):
-        all_parts = []
-        while True:
-            parts = os.path.split(path)
-            if parts[0] == path:  # sentinel for absolute paths
-                all_parts.insert(0, parts[0])
-                break
-            elif parts[1] == path:  # sentinel for relative paths
-                all_parts.insert(0, parts[1])
-                break
-            else:
-                path = parts[0]
-                all_parts.insert(0, parts[1])
-        return all_parts
 
     def add_to_path(self, name):
         sourceDir = getattr(self, name.lower())
@@ -213,7 +198,7 @@ class build_exe(distutils.core.Command):
                     in_header = False
                     continue
                 elif not in_header:
-                    top_packages[self.split_all(line)[0]] = root
+                    top_packages[pathlib.Path(line).parts[0]] = root
                     if line.endswith('.dll') or line.endswith('.pyd'):
                         options['pathex'].append(os.path.dirname(os.path.join(root, line)))
 
