@@ -9,6 +9,7 @@ import re
 import shutil
 import string
 import uuid
+import textwrap
 from io import StringIO
 
 import PyRTF
@@ -55,8 +56,10 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         :param license_file: file-like object
         :return:
         """
-        wordpad_header = r'''{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1033{\fonttbl{\f0\fnil\fcharset255 Times New Roman;}
-{\*\generator Riched20 10.0.14393}\viewkind4\uc1'''.replace('\n', '\r\n')
+        wordpad_header = textwrap.dedent(r'''
+            {\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1033{\fonttbl{\f0\fnil\fcharset255 Times New Roman;}
+            {\*\generator Riched20 10.0.14393}\viewkind4\uc1
+            ''').strip().replace('\n', '\r\n')
         center_space = '            '
 
         pattern = re.compile(r'{}\s*'.format(center_space))
