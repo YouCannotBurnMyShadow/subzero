@@ -27,6 +27,10 @@ def setup(**attrs):
         if sys.version_info[:2] >= (2, 5):
             _AddCommandClass(commandClasses, "bdist_msi", bdist_msi)
     _AddCommandClass(commandClasses, "build_exe", build_exe)
+    if 'install_requires' in attrs:
+        # Simply set the install_requires to setup_requires and setuptools will take care of the rest.
+        attrs.setdefault('setup_requires', []).extend(attrs['install_requires'])
+
     distutils_setup(**attrs)
 
 
