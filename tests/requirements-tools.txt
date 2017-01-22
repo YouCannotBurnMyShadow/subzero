@@ -10,7 +10,10 @@ pytest-drop-dup-tests # allows specifying order without duplicates
 psutil  # Better subprocess alternative with implemented timeout.
 ipython  # Better interactive Python shell.
 mock
-lxml
+# Windows binaries on lxml are only available for this version. See #2100.
+lxml==3.4.4 ; (sys_platform == 'win32') and (python_version  <= '3.5')
+lxml ; sys_platform != 'win32'
+lxml==3.7.1 ; (sys_platform == 'win32') and (python_version  == '3.6')
 
 # Helper tools
 zest.releaser # Makes releasing easier
