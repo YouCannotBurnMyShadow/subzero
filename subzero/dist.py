@@ -61,6 +61,13 @@ class build_exe(distutils.core.Command):
         return names
 
     @staticmethod
+    def decode(bytes_or_string):
+        if isinstance(bytes_or_string, bytes):
+            return bytes_or_string.decode()
+        else:
+            return bytes_or_string
+
+    @staticmethod
     def build_dir():
         return "exe.{}-{}".format(distutils.util.get_platform(), sys.version[0:3])
 
@@ -175,7 +182,7 @@ class build_exe(distutils.core.Command):
             requirement = Requirement.parse(requirement)
             packages.append(requirement.key)
 
-        entries = json.loads(subprocess.check_output(['pipdeptree', '--json']))
+        entries = json.loads(self.decode(subprocess.check_output(['pipdeptree', '--json'])))
         updated = True
         while updated:
             updated = False
@@ -188,11 +195,11 @@ class build_exe(distutils.core.Command):
 
         location_string = 'Location:'
         files_string = 'Files:'
-        top_packages = []
+        top_packages = {}
         for package in packages:
             in_header = True
             root = None
-            for line in subprocess.check_output(['pip', 'show', '-f', package]).splitlines():
+            for line in self.decode(subprocess.check_output(['pip', 'show', '-f', package])).splitlines():
                 if in_header and line.startswith(location_string):
                     root = line[len(location_string):].strip()
                 if in_header and line.startswith(files_string):
