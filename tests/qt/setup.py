@@ -20,4 +20,4 @@ setup(
             'optimize_imports': False,
         },
     },
-    install_requires=[])
+    install_requires=['pyqt5'])
