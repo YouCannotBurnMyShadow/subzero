@@ -19,8 +19,10 @@ from PyInstaller.utils.hooks import collect_submodules
 from packaging import version
 from pkg_resources import EntryPoint, Requirement
 
-if version.parse(sys.version[0:3]) >= version.parse('3.4'):
+if sys.version_info >= (3, 4):
     from contextlib import suppress
+else:
+    from contextlib2 import suppress
 
 __all__ = ["build_exe", "setup"]
 
@@ -273,14 +275,8 @@ class build_exe(distutils.core.Command):
             for option_name, script_option in executable.options.items():
                 options[option_name] = script_option
 
-        if version.parse(sys.version[0:3]) >= version.parse('3.4'):
-            with suppress(OSError):
-                os.remove(os.path.join(options['specpath'], '{}.spec'.format(options['name'])))
-        else:
-            try:
-                os.remove(os.path.join(options['specpath'], '{}.spec'.format(options['name'])))
-            except OSError:
-                pass
+        with suppress(OSError):
+            os.remove(os.path.join(options['specpath'], '{}.spec'.format(options['name'])))
 
         spec_file = PyInstaller.__main__.run_makespec([script], **options)
         PyInstaller.__main__.run_build(None, spec_file, noconfirm=True, workpath=workpath, distpath=distpath)
