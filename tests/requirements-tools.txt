@@ -1,6 +1,4 @@
-# Work-around for a bug in execnet 1.4.1
-# :todo: remove this again, once a version of execnet fixing this is released
-hg+https://htgoebel@bitbucket.org/htgoebel/execnet
+--extra-index-url https://pypi.anaconda.org/xoviat/simple
 
 # For running tests
 pytest >= 2.7.3  # Testing framework.
@@ -11,6 +9,7 @@ pytest-drop-dup-tests # allows specifying order without duplicates
 psutil  # Better subprocess alternative with implemented timeout.
 ipython  # Better interactive Python shell.
 mock
+lxml
 
 # Helper tools
 zest.releaser # Makes releasing easier
