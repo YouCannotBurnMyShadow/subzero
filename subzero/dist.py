@@ -32,8 +32,8 @@ def new_yield_lines(original_yield_lines):
 
     return yield_lines
 
-
 pkg_resources.yield_lines = new_yield_lines(pkg_resources.yield_lines)
+
 
 class build_exe(distutils.core.Command):
     description = "build executables from Python scripts"
@@ -160,15 +160,16 @@ class build_exe(distutils.core.Command):
         for name in names:
             shutil.rmtree(os.path.join(self.build_exe, name), ignore_errors=True)
 
-    def add_binaries(self, options):
+    @staticmethod
+    def add_binaries(options):
         for pathex in options['pathex']:
             for root, dirs, files in os.walk(pathex):
                 for file in files:
                     if file.endswith(('.so', '.pyd')):
                         options['binaries'].append(os.path.abspath(os.path.join(pathex, root, file)), file)
 
-
-    def move_tree(self, sourceRoot, destRoot):
+    @staticmethod
+    def move_tree(sourceRoot, destRoot):
         if not os.path.exists(destRoot):
             return False
         ok = True
