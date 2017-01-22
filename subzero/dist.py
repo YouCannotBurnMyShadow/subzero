@@ -2,10 +2,13 @@
 
 import distutils.command.build
 import distutils.version
+import importlib.util
 import inspect
+import json
 import ntpath
 import os
 import shutil
+import subprocess
 import sys
 
 import PyInstaller.__main__
@@ -13,7 +16,7 @@ import pkg_resources
 from PyInstaller.building.makespec import main as makespec_main
 from PyInstaller.utils.hooks import collect_submodules
 from packaging import version
-from pkg_resources import EntryPoint
+from pkg_resources import EntryPoint, Requirement
 
 if version.parse(sys.version[0:3]) >= version.parse('3.4'):
     from contextlib import suppress
@@ -58,6 +61,22 @@ class build_exe(distutils.core.Command):
     def build_dir():
         return "exe.{}-{}".format(distutils.util.get_platform(), sys.version[0:3])
 
+    @staticmethod
+    def split_all(path):
+        all_parts = []
+        while True:
+            parts = os.path.split(path)
+            if parts[0] == path:  # sentinel for absolute paths
+                all_parts.insert(0, parts[0])
+                break
+            elif parts[1] == path:  # sentinel for relative paths
+                all_parts.insert(0, parts[1])
+                break
+            else:
+                path = parts[0]
+                all_parts.insert(0, parts[1])
+        return all_parts
+
     def add_to_path(self, name):
         sourceDir = getattr(self, name.lower())
         if sourceDir is not None:
@@ -66,6 +85,7 @@ class build_exe(distutils.core.Command):
     def initialize_options(self):
         distutils.command.build.build.initialize_options(self)
         self.build_exe = None
+        self.optimize_imports = True
 
         for name in self.makespec_args():
             if not getattr(self, name, None):
@@ -144,6 +164,8 @@ class build_exe(distutils.core.Command):
         py_options['pathex'].append(os.path.abspath(self.build_temp))
 
         self.add_binaries(py_options)
+        if not self.optimize_imports:
+            self.discover_dependencies(py_options)
 
         names = []
         for script in scripts:
@@ -159,6 +181,47 @@ class build_exe(distutils.core.Command):
         # TODO: Compare file hashes to make sure we haven't replaced files with a different version
         for name in names:
             shutil.rmtree(os.path.join(self.build_exe, name), ignore_errors=True)
+
+    def discover_dependencies(self, options):
+        packages = []
+        for requirement in self.distribution.setup_requires:
+            requirement = Requirement.parse(requirement)
+            packages.append(requirement.key)
+
+        entries = json.loads(subprocess.check_output(['pipdeptree', '--json']))
+        updated = True
+        while updated:
+            updated = False
+            for entry in entries:
+                if entry['package']['key'] in packages:
+                    for dependency in entry['dependencies']:
+                        if dependency['key'] not in packages:
+                            packages.append(dependency['key'])
+                            updated = True
+
+        location_string = 'Location:'
+        files_string = 'Files:'
+        top_packages = []
+        for package in packages:
+            in_header = True
+            root = None
+            for line in subprocess.check_output(['pip', 'show', '-f', package]).splitlines():
+                if in_header and line.startswith(location_string):
+                    root = line[len(location_string):].strip()
+                if in_header and line.startswith(files_string):
+                    assert root is not None
+                    in_header = False
+                    continue
+                elif not in_header:
+                    top_packages[self.split_all(line)[0]] = root
+                    if line.endswith('.dll') or line.endswith('.pyd'):
+                        options['pathex'].append(os.path.dirname(os.path.join(root, line)))
+
+        for top_package, root in top_packages.items():
+            if importlib.util.find_spec(top_package) is not None:
+                options['hiddenimports'].extend(collect_submodules(top_package))
+                options['pathex'].append(root)
+
 
     @staticmethod
     def add_binaries(options):
