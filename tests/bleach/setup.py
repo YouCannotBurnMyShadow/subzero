@@ -14,7 +14,7 @@ setup(
     },
     options={
         'build_exe': {
-            'optimize_imports': True,
+            'optimize_imports': False,
         },
     },
     install_requires=['bleach'])
