@@ -12,4 +12,4 @@ setup(
             'my_project = hello_world.__main__:main',
         ]
     },
-    install_requires=['pyqt5'])
+    install_requires=['bleach'])

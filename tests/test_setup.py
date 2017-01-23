@@ -3,8 +3,6 @@ import subprocess
 import sys
 import tempfile
 
-import pytest
-
 
 def run_setup_command(directory, setup_command, arguments=[]):
     package_path = os.path.join(os.path.dirname(__file__), directory)
@@ -31,9 +29,8 @@ def test_hello_world():
     assert output == b'Script executed successfully!\r\n'
 
 
-@pytest.mark.xfail
 def test_imports():
-    run_setup_command('qt', 'build_exe')
+    run_setup_command('bleach', 'build_exe')
 
     # find the build directory
     for d in os.listdir('build'):

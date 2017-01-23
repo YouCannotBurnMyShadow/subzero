@@ -1,7 +1,3 @@
-# Work-around for a bug in execnet 1.4.1
-# :todo: remove this again, once a version of execnet fixing this is released
-hg+https://htgoebel@bitbucket.org/htgoebel/execnet
-
 # For running tests
 pytest >= 2.7.3  # Testing framework.
 pytest-xdist  # Plugin allowing running tests in parallel.
@@ -11,6 +7,7 @@ pytest-drop-dup-tests # allows specifying order without duplicates
 psutil  # Better subprocess alternative with implemented timeout.
 ipython  # Better interactive Python shell.
 mock
+bleach
 
 # Helper tools
 zest.releaser # Makes releasing easier
