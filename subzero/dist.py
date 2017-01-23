@@ -68,6 +68,15 @@ class build_exe(distutils.core.Command):
             return bytes_or_string
 
     @staticmethod
+    def is_binary(file):
+        return file.endswith((
+            '.so',
+            '.pyd',
+            '.dll',
+        ))
+
+
+    @staticmethod
     def build_dir():
         return "exe.{}-{}".format(distutils.util.get_platform(), sys.version[0:3])
 
@@ -208,7 +217,7 @@ class build_exe(distutils.core.Command):
                     continue
                 elif not in_header:
                     top_packages[pathlib.Path(line).parts[0].strip()] = root
-                    if line.endswith('.dll') or line.endswith('.pyd'):
+                    if self.is_binary(line.strip()):
                         options['pathex'].append(os.path.dirname(os.path.join(root, line.strip())))
 
         for top_package, root in top_packages.items():
@@ -219,13 +228,11 @@ class build_exe(distutils.core.Command):
 
         options['pathex'] = list(set(options['pathex']))
 
-
-    @staticmethod
-    def add_binaries(options):
+    def add_binaries(self, options):
         for pathex in options['pathex']:
             for root, dirs, files in os.walk(pathex):
                 for file in files:
-                    if file.endswith(('.so', '.pyd')):
+                    if self.is_binary(file):
                         options['binaries'].append(os.path.abspath(os.path.join(pathex, root, file)), file)
 
     @staticmethod
