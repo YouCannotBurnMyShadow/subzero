@@ -233,7 +233,7 @@ class build_exe(distutils.core.Command):
             for root, dirs, files in os.walk(pathex):
                 for file in files:
                     if self.is_binary(file):
-                        options['binaries'].append(os.path.abspath(os.path.join(pathex, root, file)), file)
+                        options['binaries'].append((os.path.abspath(os.path.join(pathex, root, file)), file))
 
         options['binaries'] = list(set(options['binaries']))
 
