@@ -12,4 +12,9 @@ setup(
             'my_project = hello_world.__main__:main',
         ]
     },
+    options={
+        'build_exe': {
+            'optimize_imports': True,
+        },
+    },
     install_requires=['bleach'])
