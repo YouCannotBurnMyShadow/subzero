@@ -166,9 +166,9 @@ class build_exe(distutils.core.Command):
         py_options['specpath'] = os.path.abspath(self.build_temp)
         py_options['pathex'].append(os.path.abspath(self.build_temp))
 
-        self.add_binaries(py_options)
         if not self.optimize_imports:
             self.discover_dependencies(py_options)
+        self.add_binaries(py_options)
 
         names = []
         for script in scripts:
@@ -233,7 +233,9 @@ class build_exe(distutils.core.Command):
             for root, dirs, files in os.walk(pathex):
                 for file in files:
                     if self.is_binary(file):
-                        options['binaries'].append(os.path.abspath(os.path.join(pathex, root, file)), file)
+                        options['binaries'].append((os.path.abspath(os.path.join(pathex, root, file)), file))
+
+        options['binaries'] = list(set(options['binaries']))
 
     @staticmethod
     def move_tree(sourceRoot, destRoot):
