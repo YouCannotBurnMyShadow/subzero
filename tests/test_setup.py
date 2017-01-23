@@ -4,8 +4,8 @@ import sys
 import tempfile
 
 
-def run_setup_command(setup_command, arguments=[]):
-    package_path = os.path.join(os.path.dirname(__file__), 'hello_world')
+def run_setup_command(directory, setup_command, arguments=[]):
+    package_path = os.path.join(os.path.dirname(__file__), directory)
     os.chdir(package_path)
 
     sys.argv[1:] = [setup_command] + list(arguments)
@@ -14,7 +14,23 @@ def run_setup_command(setup_command, arguments=[]):
 
 
 def test_hello_world():
-    run_setup_command('build_exe')
+    run_setup_command('hello_world', 'build_exe')
+
+    # find the build directory
+    for d in os.listdir('build'):
+        if d.startswith('exe.') and os.path.isdir(os.path.join('build', d)):
+            build_dir = d
+
+    if not build_dir:
+        raise ValueError('Unable to locate build directory!')
+
+    output = subprocess.check_output([os.path.join('build', build_dir, 'my_project.exe')])
+
+    assert output == b'Script executed successfully!\r\n'
+
+
+def test_imports():
+    run_setup_command('bleach', 'build_exe')
 
     # find the build directory
     for d in os.listdir('build'):
@@ -30,7 +46,7 @@ def test_hello_world():
 
 
 def test_bdist_msi():
-    run_setup_command('bdist_msi', ['--skip-build'])
+    run_setup_command('hello_world', 'bdist_msi', ['--skip-build'])
 
     # find the location of the msi installer
     for f in os.listdir('dist'):
