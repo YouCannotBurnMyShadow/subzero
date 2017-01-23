@@ -12,12 +12,4 @@ setup(
             'my_project = hello_world.__main__:main',
         ]
     },
-    options={
-        'build_exe': {
-            'hiddenimports': [],
-            'pathex': [],
-            'datas': [],
-            'optimize_imports': False,
-        },
-    },
     install_requires=['pyqt5'])
