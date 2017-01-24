@@ -76,7 +76,7 @@ In case PyInstaller cannot discover all of your dependencies, you can set `optim
 This option may discover certain imports previously not found but it may also make your application larger.
 
 ```python
-    build_exe': {
+    'build_exe': {
         'optimize_imports': False
     },
 ```
