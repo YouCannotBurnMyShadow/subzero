@@ -70,9 +70,16 @@ The full array of options for build_exe is available in the PyInstaller document
 **strongly recommended** for the bdist_msi command. A license agreement will be added to the installer if there is 
 a license text file in the same directory as setup.py.
 
-Note that Subzero currently cannot create shortcuts that are not placed in a root system directory. In other 
-words, you can currently have a shortcut on the desktop of in the program menu but not in a folder on the desktop or in 
-a folder on the program menu. This may be resolved in the future if there is greater interest.
+## Extended import discovery (In beta)
+
+In case PyInstaller cannot discover all of your dependencies, you can set `optimize_imports=False`, as shown below.
+This option may discover certain imports previously not found but it may also make your application larger.
+
+```python
+    build_exe': {
+        'optimize_imports': False
+    },
+```
 
 ## Cython (currently not in tests)
 
