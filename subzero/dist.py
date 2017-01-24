@@ -11,9 +11,9 @@ import pathlib
 import shutil
 import subprocess
 import sys
+from subprocess import CalledProcessError
 
 import PyInstaller.__main__
-import pkg_resources
 from PyInstaller.building.makespec import main as makespec_main
 from PyInstaller.utils.hooks import collect_submodules
 from packaging import version
@@ -27,20 +27,6 @@ else:
 __all__ = ["build_exe", "setup"]
 
 
-# Monkeypatches yield_lines to accept executables
-# TODO: Patch in setup function rather than here
-def new_yield_lines(original_yield_lines):
-    def yield_lines(strs):
-        if type(strs) is Executable:
-            return original_yield_lines(str(strs))
-        else:
-            return original_yield_lines(strs)
-
-    return yield_lines
-
-pkg_resources.yield_lines = new_yield_lines(pkg_resources.yield_lines)
-
-
 class build_exe(distutils.core.Command):
     description = "build executables from Python scripts"
     user_options = []
@@ -49,7 +35,7 @@ class build_exe(distutils.core.Command):
         'scripts',
         'specpath',
     ]
-    _executables = []
+
 
     @classmethod
     def makespec_args(cls):
@@ -89,6 +75,7 @@ class build_exe(distutils.core.Command):
         distutils.command.build.build.initialize_options(self)
         self.build_exe = None
         self.optimize_imports = True
+        self.executables = []
 
         for name in self.makespec_args():
             if not getattr(self, name, None):
@@ -115,11 +102,6 @@ class build_exe(distutils.core.Command):
             self.distribution.scripts = []
 
         self.distribution.entry_points.setdefault('console_scripts', [])
-        for script in self.distribution.scripts + self.distribution.entry_points['console_scripts']:
-            if type(script) is Executable:
-                self._executables.append(script)
-            else:
-                self._executables.append(None)
 
     def run(self):
         try:
@@ -208,17 +190,18 @@ class build_exe(distutils.core.Command):
         for package in packages:
             in_header = True
             root = None
-            for line in self.decode(subprocess.check_output(['pip', 'show', '-f', package])).splitlines():
-                if in_header and line.startswith(location_string):
-                    root = line[len(location_string):].strip()
-                if in_header and line.startswith(files_string):
-                    assert root is not None
-                    in_header = False
-                    continue
-                elif not in_header:
-                    top_packages[pathlib.Path(line).parts[0].strip()] = root
-                    if self.is_binary(line.strip()):
-                        options['pathex'].append(os.path.dirname(os.path.join(root, line.strip())))
+            with suppress(CalledProcessError):
+                for line in self.decode(subprocess.check_output(['pip', 'show', '-f', package])).splitlines():
+                    if in_header and line.startswith(location_string):
+                        root = line[len(location_string):].strip()
+                    if in_header and line.startswith(files_string):
+                        assert root is not None
+                        in_header = False
+                        continue
+                    elif not in_header:
+                        top_packages[pathlib.Path(line).parts[0].strip()] = root
+                        if self.is_binary(line.strip()):
+                            options['pathex'].append(os.path.dirname(os.path.join(root, line.strip())))
 
         for top_package, root in top_packages.items():
             with suppress(ImportError, ValueError, AttributeError):
@@ -288,7 +271,7 @@ class build_exe(distutils.core.Command):
     def _freeze(self, script, workpath, distpath, options):
         options['name'] = '.'.join(ntpath.basename(script).split('.')[:-1])
 
-        executable = self._executables.pop(0)
+        executable = self.executables.pop(0)
         if executable:
             # We need to apply the script-specific options
             for option_name, script_option in executable.options.items():
