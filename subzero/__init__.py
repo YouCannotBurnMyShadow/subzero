@@ -31,6 +31,20 @@ def setup(**attrs):
         # Simply set the install_requires to setup_requires and setuptools will take care of the rest.
         attrs.setdefault('setup_requires', []).extend(attrs['install_requires'])
 
+    attrs.setdefault('scripts', [])
+    attrs.setdefault('entry_points', {}).setdefault('console_scripts', [])
+    attrs.setdefault('options', {}).setdefault('build_exe', {}).setdefault('executables', [])
+
+    for script in attrs['scripts'] + attrs['entry_points']['console_scripts']:
+        if type(script) is Executable:
+            attrs['options']['build_exe']['executables'].append(script)
+        else:
+            attrs['options']['build_exe']['executables'].append(None)
+
+    attrs['scripts'] = [str(script) for script in attrs['scripts']]
+    attrs['entry_points']['console_scripts'] = \
+        [str(entry_point) for entry_point in attrs['entry_points']['console_scripts']]
+
     distutils_setup(**attrs)
 
 
