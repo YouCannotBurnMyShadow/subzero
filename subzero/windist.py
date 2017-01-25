@@ -62,8 +62,6 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
             ''').strip().replace('\n', '\r\n')
         center_space = '            '
 
-        pattern = re.compile(r'{}\s*'.format(center_space))
-
         r = PyRTF.Renderer()
 
         doc = PyRTF.Document()
@@ -104,8 +102,6 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         return f.getvalue()
 
     def finalize_options(self):
-        initial_set = (self.distribution.author and self.distribution.name) and not self.initial_target_dir
-
         distutils.command.bdist_msi.bdist_msi.finalize_options(self)
         name = self.distribution.get_name()
         fullname = self.distribution.get_fullname()
