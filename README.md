@@ -74,7 +74,8 @@ a license text file in the same directory as setup.py.
 ## Extended import discovery (In beta)
 
 In case PyInstaller cannot discover all of your dependencies, you can set `optimize_imports=False`, as shown below.
-This option may discover certain imports previously not found but it may also make your application larger.
+This option may discover certain imports previously not found but it may also make your application larger. Note that
+you must add your package requirements in `install_requires` for this option to work!
 
 ```python
     'build_exe': {
