@@ -104,6 +104,9 @@ class build_exe(distutils.core.Command):
 
         self.distribution.entry_points.setdefault('console_scripts', [])
 
+        if not hasattr(self.distribution, 'setup_requires'):
+            self.distribution.setup_requires = []
+
     def run(self):
         try:
             entry_points = EntryPoint.parse_map(self.distribution.entry_points)['console_scripts']
