@@ -62,6 +62,15 @@ class build_exe(distutils.core.Command):
             '.dll',
         ))
 
+    def rename_script(self, script):
+        self._script_names.append(script)
+
+        # Per issue #32.
+        new_script_name = '{}.{}.py'.format(script, str(uuid.uuid4()))
+        os.rename(script, new_script_name)
+
+        return new_script_name
+
 
     @staticmethod
     def build_dir():
@@ -77,6 +86,7 @@ class build_exe(distutils.core.Command):
         self.build_exe = None
         self.optimize_imports = True
         self.executables = []
+        self._script_names = []
 
         for name in self.makespec_args():
             if not getattr(self, name, None):
@@ -151,7 +161,8 @@ class build_exe(distutils.core.Command):
 
         if not self.optimize_imports:
             self.discover_dependencies(py_options)
-        
+
+        scripts = [self.rename_script(script) for script in scripts]
         names = []
         for script in scripts:
             names.append(self._freeze(script, self.build_temp, self.build_exe, py_options.copy()))
@@ -260,12 +271,7 @@ class build_exe(distutils.core.Command):
         return script_path
 
     def _freeze(self, script, workpath, distpath, options):
-        options['name'] = '.'.join(ntpath.basename(script).split('.')[:-1])
-
-        # Per issue #32.
-        new_script_name = '{}.{}.py'.format(script, str(uuid.uuid4()))
-        os.rename(script, new_script_name)
-        script = new_script_name
+        options['name'] = '.'.join(ntpath.basename(self._script_names.pop(0)).split('.')[:-1])
 
         executable = self.executables.pop(0)
         if executable:
