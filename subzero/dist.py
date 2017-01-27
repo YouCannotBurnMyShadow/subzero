@@ -11,6 +11,7 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import uuid
 from subprocess import CalledProcessError
 
 import PyInstaller.__main__
@@ -260,6 +261,11 @@ class build_exe(distutils.core.Command):
 
     def _freeze(self, script, workpath, distpath, options):
         options['name'] = '.'.join(ntpath.basename(script).split('.')[:-1])
+
+        # Per issue #32.
+        new_script_name = '{}.{}.py'.format(script, str(uuid.uuid4()))
+        os.rename(script, new_script_name)
+        script = new_script_name
 
         executable = self.executables.pop(0)
         if executable:
