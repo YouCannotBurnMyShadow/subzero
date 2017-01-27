@@ -62,14 +62,12 @@ class build_exe(distutils.core.Command):
             '.dll',
         ))
 
-    def rename_script(self, script):
-        self._script_names.append(script)
-
+    @staticmethod
+    def rename_script(executable):
         # Per issue #32.
-        new_script_name = '{}.{}.py'.format(script, str(uuid.uuid4()))
-        os.rename(script, new_script_name)
-
-        return new_script_name
+        new_script_name = '{}.{}.py'.format(executable.script, str(uuid.uuid4()))
+        os.rename(executable.script, new_script_name)
+        executable.script = new_script_name
 
 
     @staticmethod
@@ -120,11 +118,11 @@ class build_exe(distutils.core.Command):
         except KeyError:
             entry_points = []
         try:
-            py_options = {}
+            options = {}
             for key, value in dict(self.distribution.command_options['build_exe']).items():
-                py_options[key] = value[1]
+                options[key] = value[1]
         except (KeyError, TypeError):
-            py_options = {}
+            options = {}
 
         scripts = self.distribution.scripts
         for required_directory in [self.build_temp, self.build_exe]:
@@ -141,31 +139,42 @@ class build_exe(distutils.core.Command):
         self.run_command('build')
 
         for default_option in ['pathex', 'hiddenimports', 'binaries']:
-            py_options.setdefault(default_option, [])
+            options.setdefault(default_option, [])
 
         # by convention, all paths appended to py_options must be absolute
-        py_options['hiddenimports'].extend(self.distribution.install_requires)
+        options['hiddenimports'].extend(self.distribution.install_requires)
         for lib_dir in lib_dirs:
             if os.path.isdir(os.path.join(self.build_base, lib_dir)):
-                py_options['pathex'].append(os.path.abspath(os.path.join(self.build_base, lib_dir)))
+                options['pathex'].append(os.path.abspath(os.path.join(self.build_base, lib_dir)))
 
-        if not py_options['pathex']:
+        if not options['pathex']:
             raise ValueError('Unable to find lib directory!')
 
         if version.parse(sys.version[0:3]) >= version.parse('3.4'):
             for package in self.distribution.packages:
-                py_options['hiddenimports'].extend(collect_submodules(package))
+                options['hiddenimports'].extend(collect_submodules(package))
 
-        py_options['specpath'] = os.path.abspath(self.build_temp)
-        py_options['pathex'].append(os.path.abspath(self.build_temp))
+        options['specpath'] = os.path.abspath(self.build_temp)
+        options['pathex'].append(os.path.abspath(self.build_temp))
 
         if not self.optimize_imports:
-            self.discover_dependencies(py_options)
+            self.discover_dependencies(options)
 
-        scripts = [self.rename_script(script) for script in scripts]
-        names = []
-        for script in scripts:
-            names.append(self._freeze(script, self.build_temp, self.build_exe, py_options.copy()))
+        executables = []
+        for script, executable in zip(scripts, self.executables):
+            executable = executable or Executable(script)
+            executable.script = script
+            executable._options = dict(options, **executable.options)
+            executable._options['name'] = '.'.join(ntpath.basename(script).split('.')[:-1])
+
+            executables.append(executable)
+
+        for executable in executables:
+            self.rename_script(executable)
+
+        names = [executable.options['name'] for executable in executables]
+        for executable in executables:
+            self._freeze(executable, self.build_temp, self.build_exe)
 
         for name in names[1:]:
             self.move_tree(os.path.join(self.build_exe, name), os.path.join(self.build_exe, names[0]))
@@ -270,23 +279,15 @@ class build_exe(distutils.core.Command):
 
         return script_path
 
-    def _freeze(self, script, workpath, distpath, options):
-        options['name'] = '.'.join(ntpath.basename(self._script_names.pop(0)).split('.')[:-1])
-
-        executable = self.executables.pop(0)
-        if executable:
-            # We need to apply the script-specific options
-            for option_name, script_option in executable.options.items():
-                options[option_name] = script_option
+    @staticmethod
+    def _freeze(executable, workpath, distpath):
 
         with suppress(OSError):
-            os.remove(os.path.join(options['specpath'], '{}.spec'.format(options['name'])))
+            os.remove(os.path.join(executable.options['specpath'], '{}.spec'.format(executable.options['name'])))
 
-        spec_file = PyInstaller.__main__.run_makespec([script], **options)
+        spec_file = PyInstaller.__main__.run_makespec([executable.script], **executable.options)
         PyInstaller.__main__.run_build(None, spec_file, noconfirm=True, workpath=workpath, distpath=distpath)
         # os.remove(spec_file)
-
-        return options['name']
 
 
 class Executable(object):
