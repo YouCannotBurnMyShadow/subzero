@@ -2,12 +2,11 @@
 
 import distutils.command.build
 import distutils.version
-import importlib.util
 import inspect
 import json
 import ntpath
 import os
-import pathlib
+import pkgutil
 import shutil
 import subprocess
 import sys
@@ -16,9 +15,11 @@ from subprocess import CalledProcessError
 
 import PyInstaller.__main__
 from PyInstaller.building.makespec import main as makespec_main
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_submodules, get_module_file_attribute
 from packaging import version
 from pkg_resources import EntryPoint, Requirement
+
+# from pyspin.spin import make_spin, Spin1
 
 if sys.version_info >= (3, 4):
     from contextlib import suppress
@@ -187,7 +188,24 @@ class build_exe(distutils.core.Command):
         for name in names:
             shutil.rmtree(os.path.join(self.build_exe, name), ignore_errors=True)
 
-    def discover_dependencies(self, options):
+    # @make_spin(Spin1, 'Compiling module file locations...')
+    def _compile_modules(self):
+        modules = {}
+
+        for module_finder, name, ispkg in pkgutil.walk_packages():
+            try:
+                loader = module_finder.find_spec(name).loader
+                filename = loader.get_filename(name)
+            # Second, attempt to discover the module location with PyInstaller.
+            except (AttributeError, ImportError):
+                filename = get_module_file_attribute(name)
+
+            modules[os.path.abspath(filename)] = name
+
+        return modules
+
+    # @make_spin(Spin1, 'Compiling project requirements...')
+    def _compile_requirements(self):
         packages = []
         for requirement in self.distribution.setup_requires:
             requirement = Requirement.parse(requirement)
@@ -206,28 +224,43 @@ class build_exe(distutils.core.Command):
 
         location_string = 'Location:'
         files_string = 'Files:'
-        top_packages = {}
+        module_files = set()
+        binary_files = set()
+
         for package in packages:
             in_header = True
             root = None
             with suppress(CalledProcessError):
                 for line in self.decode(subprocess.check_output(['pip', 'show', '-f', package])).splitlines():
+                    line = line.strip()
                     if in_header and line.startswith(location_string):
-                        root = line[len(location_string):].strip()
+                        root = line[len(location_string):]
                     if in_header and line.startswith(files_string):
                         assert root is not None
                         in_header = False
                         continue
                     elif not in_header:
-                        top_packages[pathlib.Path(line).parts[0].strip()] = root
-                        if self.is_binary(line.strip()):
-                            options['pathex'].append(os.path.dirname(os.path.join(root, line.strip())))
+                        full_path = os.path.abspath(os.path.join(root, line.strip()))
+                        if line.endswith('.py') or line.endswith('.pyc'):
+                            module_files.add(full_path)
+                        if self.is_binary(line):
+                            binary_files.add(full_path)
 
-        for top_package, root in top_packages.items():
-            with suppress(ImportError, ValueError, AttributeError):
-                if importlib.util.find_spec(top_package) is not None:
-                    options['hiddenimports'].extend(collect_submodules(top_package))
-                    options['pathex'].append(root)
+        return module_files, binary_files
+
+    def discover_dependencies(self, options):
+        module_files = self._compile_modules()
+        required_module_files, required_binary_files = self._compile_requirements()
+
+        for required_file in required_module_files:
+            try:
+                options['hiddenimports'].append(module_files[required_file])
+            except KeyError:
+                print('Unable to collect module for {}'.format(required_file))
+
+        for required_file in required_binary_files:
+            # FIXME: Add to binaries rather than simply appending to pathex.
+            options['pathex'].append(os.path.dirname(required_file))
 
         options['pathex'] = list(set(options['pathex']))
 

@@ -28,6 +28,7 @@ setup(
         'packaging',
         'pywix',
         'pipdeptree',
+        'pyspin',
         'pathlib;python_version<"3.4"',
         'contextlib2;python_version<"3.4"',
     ],
