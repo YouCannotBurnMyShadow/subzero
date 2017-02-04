@@ -102,6 +102,11 @@ class build_exe(distutils.core.Command):
             self.distribution.install_requires = []
 
         try:
+            self.distribution.setup_requires = list(self.distribution.setup_requires)
+        except TypeError:
+            self.distribution.setup_requires = []
+
+        try:
             self.distribution.packages = list(self.distribution.packages)
         except TypeError:
             self.distribution.packages = []
