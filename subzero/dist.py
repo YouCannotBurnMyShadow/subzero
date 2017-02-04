@@ -193,12 +193,16 @@ class build_exe(distutils.core.Command):
         modules = {}
 
         for module_finder, name, ispkg in pkgutil.walk_packages():
-            try:
-                loader = module_finder.find_spec(name).loader
-                filename = loader.get_filename(name)
-            # Second, attempt to discover the module location with PyInstaller.
-            except (AttributeError, ImportError):
-                filename = get_module_file_attribute(name)
+            for attempt in range(2):
+                with suppress((AttributeError, ImportError)):
+                    if attempt == 0:
+                        loader = module_finder.find_spec(name).loader
+                        filename = loader.get_filename(name)
+                    elif attempt == 1:
+                        filename = get_module_file_attribute(name)
+                    break
+            else:
+                continue
 
             modules[os.path.abspath(filename)] = name
 
