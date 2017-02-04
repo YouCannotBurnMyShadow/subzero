@@ -70,15 +70,9 @@ class build_exe(distutils.core.Command):
         os.rename(executable.script, new_script_name)
         executable.script = new_script_name
 
-
     @staticmethod
     def build_dir():
         return "exe.{}-{}".format(distutils.util.get_platform(), sys.version[0:3])
-
-    def add_to_path(self, name):
-        sourceDir = getattr(self, name.lower())
-        if sourceDir is not None:
-            sys.path.insert(0, sourceDir)
 
     def initialize_options(self):
         distutils.command.build.build.initialize_options(self)
