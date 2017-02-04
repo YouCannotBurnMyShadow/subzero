@@ -213,7 +213,7 @@ class build_exe(distutils.core.Command):
     # @make_spin(Spin1, 'Compiling project requirements...')
     def _compile_requirements(self):
         packages = []
-        for requirement in self.distribution.setup_requires:
+        for requirement in self.distribution.install_requires:
             requirement = Requirement.parse(requirement)
             packages.append(requirement.key)
 
