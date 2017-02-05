@@ -159,6 +159,9 @@ class build_exe(distutils.core.Command):
 
         options['specpath'] = os.path.abspath(self.build_temp)
         options['pathex'].append(os.path.abspath(self.build_temp))
+        
+        for i, tp in enumerate(options.setdefault('datas', [])):
+            options['datas'][i][0] = os.path.abspath(options['datas'][i][0])
 
         if not self.optimize_imports:
             self.discover_dependencies(options)
