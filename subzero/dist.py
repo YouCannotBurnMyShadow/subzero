@@ -18,8 +18,7 @@ from PyInstaller.building.makespec import main as makespec_main
 from PyInstaller.utils.hooks import collect_submodules, get_module_file_attribute
 from packaging import version
 from pkg_resources import EntryPoint, Requirement
-
-# from pyspin.spin import make_spin, Spin1
+from pyspin.spin import make_spin, Spin1
 
 if sys.version_info >= (3, 4):
     from contextlib import suppress
@@ -193,7 +192,7 @@ class build_exe(distutils.core.Command):
         for name in names:
             shutil.rmtree(os.path.join(self.build_exe, name), ignore_errors=True)
 
-    # @make_spin(Spin1, 'Compiling module file locations...')
+    @make_spin(Spin1, 'Compiling module file locations...')
     def _compile_modules(self):
         modules = {}
 
@@ -213,7 +212,7 @@ class build_exe(distutils.core.Command):
 
         return modules
 
-    # @make_spin(Spin1, 'Compiling project requirements...')
+    @make_spin(Spin1, 'Compiling project requirements...')
     def _compile_requirements(self):
         packages = []
         for requirement in self.distribution.install_requires:
