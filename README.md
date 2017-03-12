@@ -9,6 +9,9 @@ code. Subzero does this by providing a simple and intuitive wrapper for PyInstal
 builder. With a few lines of code and a single command, you can go directly from Python code to a compiled MSI
 installer.
 
+In the future, subzero will intelligently precompile python modules with nuitka so that the compiled binary
+actually runs faster than the original python code.
+
 [1]: http://docs.python-guide.org/en/latest/shipping/freezing/
 [2]: https://ci.appveyor.com/api/projects/status/github/xoviat/subzero?branch=master&svg=true
 [3]: https://ci.appveyor.com/project/xoviat/pyinstaller-utils
