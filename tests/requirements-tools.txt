@@ -13,6 +13,9 @@ ipython  # Better interactive Python shell.
 mock
 bleach
 
+# Install the latest development version of PyInstaller
+git+https://github.com/pyinstaller/pyinstaller.git
+
 # Windows binaries on lxml are only available for this version. See #2100.
 lxml==3.4.4 ; (sys_platform == 'win32') and (python_version  <= '3.5')
 lxml ; sys_platform != 'win32'
