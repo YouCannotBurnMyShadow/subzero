@@ -29,6 +29,7 @@ setup(
         'pywix',
         'pipdeptree',
         'pyspin',
+        'lxml',
         'pathlib;python_version<"3.4"',
         'contextlib2;python_version<"3.4"',
     ],
