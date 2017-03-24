@@ -10,6 +10,7 @@ environment:
     # /E:ON and /V:ON options are not enabled in the batch script intepreter
     # See: http://stackoverflow.com/a/13751649/163740
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\tests\\scripts\\appveyor\\run_with_env.cmd"
+    TEST1_CMD: "py.test --cov=./ --maxfail 5 --junitxml=junit-results.xml --durations=10 tests"
 
   matrix:
     - PYTHON: "C:\\Python35-x64"
@@ -19,7 +20,6 @@ environment:
       # Break the tests into two runs, since together they exceed the 1 hour limit.
       # See https://github.com/pyinstaller/pyinstaller/issues/2024#issuecomment-224129520
       # for more discussion.
-      TEST1_CMD: "py.test --cov=./ --maxfail 5 --durations=10 tests"
 
     - PYTHON: "C:\\Python35"
       PYTHON_VERSION: "3.5"
@@ -28,19 +28,16 @@ environment:
       # Break the tests into two runs, since together they exceed the 1 hour limit.
       # See https://github.com/pyinstaller/pyinstaller/issues/2024#issuecomment-224129520
       # for more discussion.
-      TEST1_CMD: "py.test --cov=./ --maxfail 5 --durations=10 tests"
 
     - PYTHON: "C:\\Python34"
       PYTHON_VERSION: "3.4"
       PYTHON_ARCH: "32"
       VCVARSALL: "x86"
-      TEST1_CMD: "py.test --cov=./ --maxfail 5 --durations=10 tests"
 
     - PYTHON: "C:\\Python33"
       PYTHON_VERSION: "3.3"
       PYTHON_ARCH: "32"
       VCVARSALL: "x86"
-      TEST1_CMD: "py.test --cov=./ --maxfail 5 --durations=10 tests"
 
     - PYTHON: "C:\\Python36-x64"
       PYTHON_VERSION: "3.6"
@@ -49,7 +46,6 @@ environment:
       # Break the tests into two runs, since together they exceed the 1 hour limit.
       # See https://github.com/pyinstaller/pyinstaller/issues/2024#issuecomment-224129520
       # for more discussion.
-      TEST1_CMD: "py.test --cov=./ --maxfail 5 --durations=10 tests"
 
 matrix:
   allow_failures:
@@ -111,3 +107,9 @@ on_success:
 
 on_finish:
   - codecov
+  - ps: |
+      (new-object net.webclient).UploadFile(
+        "https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)",
+        (Resolve-Path .\junit-results.xml)
+      )
+      $LastExitCode = 0
