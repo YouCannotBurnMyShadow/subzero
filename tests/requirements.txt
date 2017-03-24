@@ -1,7 +1,3 @@
---extra-index-url https://pypi.anaconda.org/xoviat/simple
---extra-index-url https://pypi.anaconda.org/giumas/simple
-
-
 # For running tests
 pytest >= 2.7.3  # Testing framework.
 pytest-xdist  # Plugin allowing running tests in parallel.
@@ -9,26 +5,17 @@ pytest-timeout # Plugin to abort hanging tests.
 pytest-catchlog  # Capture log output separately from stdout/stderr
 pytest-drop-dup-tests # allows specifying order without duplicates
 psutil  # Better subprocess alternative with implemented timeout.
-ipython  # Better interactive Python shell.
 mock
 bleach
 
 # Install the latest development version of PyInstaller
 git+https://github.com/pyinstaller/pyinstaller.git
 
-# Windows binaries on lxml are only available for this version. See #2100.
-lxml==3.4.4 ; (sys_platform == 'win32') and (python_version  <= '3.5')
-lxml ; sys_platform != 'win32'
-lxml==3.7.1 ; (sys_platform == 'win32') and (python_version  == '3.6')
-
 # Helper tools
-zest.releaser # Makes releasing easier
-wheel>0.24.0  # For creating .whl packages in Appveyour to avoid compiling again.
 check-manifest  # Checks MANIFEST.in
 pyroma  # Checks if package follows best practices of Python packaging.
 chardet  # character encoding detector.
 readme  # Check PYPI description.
-twine  # For secure upload of tar.gz to PYPI.
 pycmd  # Contains 'py.cleanup' that removes all .pyc files and similar.
 codecov
 pytest-cov
