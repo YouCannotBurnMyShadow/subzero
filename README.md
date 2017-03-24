@@ -1,4 +1,7 @@
 # subzero
+
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/1568bcb5178b4e4d80dae7840df03f08)](https://www.codacy.com/app/pywin32/subzero?utm_source=github.com&utm_medium=referral&utm_content=xoviat/subzero&utm_campaign=badger)
+
 [![build status][2]][3]
 [![Codecov][5]][4]
 
