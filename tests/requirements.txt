@@ -1,3 +1,5 @@
+--extra-index-url https://pypi.anaconda.org/giumas/simple
+
 # For running tests
 pytest >= 2.7.3  # Testing framework.
 pytest-xdist  # Plugin allowing running tests in parallel.
@@ -10,6 +12,9 @@ bleach
 
 # Install the latest development version of PyInstaller
 git+https://github.com/pyinstaller/pyinstaller.git
+
+# Windows binaries on lxml are only available for this version. See #2100.
+lxml==3.4.4 ; (sys_platform == 'win32') and (python_version  <= '3.5')
 
 # Helper tools
 check-manifest  # Checks MANIFEST.in
