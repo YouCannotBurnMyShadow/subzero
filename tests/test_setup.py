@@ -30,7 +30,6 @@ def test_hello_world():
     assert output == b'Script executed successfully!\r\n'
 
 
-@pytest.mark.xfail(reason='pipdeptree seems to be broken')
 def test_imports():
     run_setup_command('bleach', 'build_exe')
 
