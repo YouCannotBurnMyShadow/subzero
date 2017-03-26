@@ -10,8 +10,7 @@ except ImportError:
 
 from subzero.dist import build_exe, Executable
 from subzero.windist import bdist_msi
-
-
+from pyspin.spin import make_spin, Spin1
 
 version = "5.0"
 __version__ = version
@@ -22,6 +21,16 @@ def _AddCommandClass(commandClasses, name, cls):
         commandClasses[name] = cls
 
 
+@make_spin(Spin1, 'Installing project requirements...')
+def install_requirements(requirements):
+    command = [sys.executable, '-m', 'pip', 'install', '--user'] + requirements
+    try: 
+        subprocess.check_output(command, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        print(e.output)
+        raise e
+
+
 def setup(**attrs):
     commandClasses = attrs.setdefault("cmdclass", {})
     if sys.platform == "win32":
@@ -29,13 +38,12 @@ def setup(**attrs):
             _AddCommandClass(commandClasses, "bdist_msi", bdist_msi)
     _AddCommandClass(commandClasses, "build_exe", build_exe)
     if 'install_requires' in attrs and attrs['install_requires']:
-        command = [sys.executable, '-m', 'pip', 'install', '--user'] + attrs['install_requires']
-        print(' '.join(command))
-        subprocess.call(command, stdout=sys.stdout, stderr=sys.stderr)
+        install_requirements(attrs['install_requires'])
 
     attrs.setdefault('scripts', [])
     attrs.setdefault('entry_points', {}).setdefault('console_scripts', [])
-    attrs.setdefault('options', {}).setdefault('build_exe', {}).setdefault('executables', [])
+    attrs.setdefault('options', {}).setdefault('build_exe', {}).setdefault(
+        'executables', [])
 
     for script in attrs['scripts'] + attrs['entry_points']['console_scripts']:
         if type(script) is Executable:
