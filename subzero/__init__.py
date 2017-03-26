@@ -1,6 +1,6 @@
 import subprocess
 import sys
-import StringIO
+import io
 
 import subzero.dist
 
@@ -24,7 +24,7 @@ def _AddCommandClass(commandClasses, name, cls):
 
 @make_spin(Spin1, 'Installing project requirements...')
 def install_requirements(requirements):
-    buffer = StringIO.StringIO()
+    buffer = io.StringIO()
     command = [sys.executable, '-m', 'pip', 'install', '--user'] + requirements
     if subprocess.call(command, stdout=buffer, stderr=buffer):
         print(buffer.getvalue())
