@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import StringIO
 
 import subzero.dist
 
@@ -10,6 +11,7 @@ except ImportError:
 
 from subzero.dist import build_exe, Executable
 from subzero.windist import bdist_msi
+from pyspin.spin import make_spin, Spin1
 
 
 
@@ -21,6 +23,14 @@ def _AddCommandClass(commandClasses, name, cls):
     if name not in commandClasses:
         commandClasses[name] = cls
 
+@make_spin(Spin1, 'Installing project requirements...')
+def install_requirements(requirements):
+    buffer = StringIO.StringIO()
+    command = [sys.executable, '-m', 'pip', 'install', '--user'] + requirements
+    if subprocess.call(command, stdout=buffer, stderr=buffer):
+        print(buffer.getvalue())
+        raise Exception('failed to install project requirements')
+        
 
 def setup(**attrs):
     commandClasses = attrs.setdefault("cmdclass", {})
@@ -29,10 +39,8 @@ def setup(**attrs):
             _AddCommandClass(commandClasses, "bdist_msi", bdist_msi)
     _AddCommandClass(commandClasses, "build_exe", build_exe)
     if 'install_requires' in attrs and attrs['install_requires']:
-        command = [sys.executable, '-m', 'pip', 'install', '--user'] + attrs['install_requires']
-        print(' '.join(command))
-        subprocess.call(command, stdout=sys.stdout, stderr=sys.stderr)
-
+        install_requirements(attrs['install_requires'])
+        
     attrs.setdefault('scripts', [])
     attrs.setdefault('entry_points', {}).setdefault('console_scripts', [])
     attrs.setdefault('options', {}).setdefault('build_exe', {}).setdefault('executables', [])
