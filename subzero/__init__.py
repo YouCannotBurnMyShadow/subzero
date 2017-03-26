@@ -11,7 +11,7 @@ except ImportError:
 from subzero.dist import build_exe, Executable
 from subzero.windist import bdist_msi
 
-# This file was originally taken from cx_Freeze by Anthony Tuininga, and is licensed under the  PSF license.
+
 
 version = "5.0"
 __version__ = version

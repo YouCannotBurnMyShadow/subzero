@@ -1,4 +1,4 @@
-# This file was originally taken from cx_Freeze by Anthony Tuininga, and is licensed under the  PSF license.
+
 
 import distutils.command.bdist_msi
 import distutils.errors

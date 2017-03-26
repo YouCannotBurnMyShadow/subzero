@@ -1,4 +1,4 @@
-# This file was originally taken from cx_freeze by Anthony Tuininga, and is licensed under the  PSF license.
+
 
 import distutils.command.build
 import distutils.version
