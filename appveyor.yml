@@ -78,6 +78,9 @@ install:
 
   # Install PyInstaller into virtualenv.
   - "%CMD_IN_ENV% pip install -e ."
+  
+  # Uninstall futures due to a bug in py-spin
+  - "%CMD_IN_ENV% pip uninstall -y futures"
 
 build: none
 
