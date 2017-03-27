@@ -135,3 +135,4 @@ ENV/
 .ropeproject
 
 .idea/
+/xyz.py
