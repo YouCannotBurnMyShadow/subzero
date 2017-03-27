@@ -9,6 +9,7 @@ except ImportError:
     from distutils.core import setup as distutils_setup
 
 from .dist import build_exe, Executable, entry_keys
+from .utils import merge_defaults
 from pyspin.spin import make_spin, Spin1
 
 version = "5.0"
@@ -31,42 +32,6 @@ def install_requirements(requirements):
     except subprocess.CalledProcessError as e:
         print(e.output)
         raise e
-
-
-def merge_defaults(a, b):
-    """merges b into a and return merged result"""
-    key = None
-    try:
-        if a is None or isinstance(a, str) or isinstance(a, int) or isinstance(
-                a, float):
-            # border case for first run or if a is a primitive
-            a = b
-        elif isinstance(a, list):
-            # lists can be only appended
-            if isinstance(b, list):
-                # merge lists
-                a.extend(b)
-            else:
-                # append to list
-                a.append(b)
-        elif isinstance(a, dict):
-            # dicts must be merged
-            if isinstance(b, dict):
-                for key in b:
-                    if key in a:
-                        a[key] = merge_defaults(a[key], b[key])
-                    else:
-                        a[key] = b[key]
-            else:
-                raise RuntimeError(
-                    'Cannot merge non-dict "%s" into dict "%s"' % (b, a))
-        else:
-            raise RuntimeError('NOT IMPLEMENTED "%s" into "%s"' % (b, a))
-    except TypeError as e:
-        raise RuntimeError(
-            'TypeError "%s" in key "%s" when merging "%s" into "%s"' % (e, key,
-                                                                        b, a))
-    return a
 
 
 def setup(**attrs):
