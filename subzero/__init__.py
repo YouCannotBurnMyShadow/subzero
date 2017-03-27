@@ -8,7 +8,7 @@ try:
 except ImportError:
     from distutils.core import setup as distutils_setup
 
-from .dist import build_exe, Executable
+from .dist import build_exe, Executable, entry_keys
 from pyspin.spin import make_spin, Spin1
 
 version = "5.0"
@@ -70,11 +70,6 @@ def merge_defaults(a, b):
 
 
 def setup(**attrs):
-    entry_keys = [
-        'console_scripts',
-        'gui_scripts',
-    ]
-
     defaults = {
         'cmdclass': {},
         'install_requires': [],

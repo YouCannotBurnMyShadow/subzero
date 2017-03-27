@@ -24,7 +24,10 @@ if sys.version_info >= (3, 4):
 else:
     from contextlib2 import suppress
 
-__all__ = ["build_exe", "setup"]
+entry_keys = [
+    'console_scripts',
+    'gui_scripts',
+]
 
 
 class build_exe(distutils.core.Command):
@@ -114,6 +117,8 @@ class build_exe(distutils.core.Command):
             self.distribution.setup_requires = []
 
     def run(self):
+        entry_points = {}
+
         try:
             entry_points = EntryPoint.parse_map(
                 self.distribution.entry_points)['console_scripts']
