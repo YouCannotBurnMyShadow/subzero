@@ -1,5 +1,3 @@
-
-
 import distutils.command.bdist_msi
 import distutils.errors
 import distutils.util
@@ -17,7 +15,8 @@ import lxml.etree as le
 import pywix
 from pkg_resources import resource_filename, resource_string
 
-from subzero.dist import build_exe
+from .dist import build_exe
+from .utils import build_dir
 
 __all__ = ["bdist_msi"]
 
@@ -79,8 +78,10 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                 is_centered = False
                 for sec_line in paragraph_text:
                     if is_centered:
-                        para_props = PyRTF.ParagraphPS(alignment=PyRTF.ParagraphPS.CENTER)
-                        p = PyRTF.Paragraph(ss.ParagraphStyles.Normal, para_props)
+                        para_props = PyRTF.ParagraphPS(
+                            alignment=PyRTF.ParagraphPS.CENTER)
+                        p = PyRTF.Paragraph(ss.ParagraphStyles.Normal,
+                                            para_props)
                         p.append(sec_line)
                         sec.append(p)
                     elif sec_line:  # first element may be nothing, but not whitespace
@@ -111,7 +112,8 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                 programFilesFolder = "ProgramFiles64Folder"
             else:
                 programFilesFolder = "ProgramFilesFolder"
-            self.initial_target_dir = r"[{}]\{}\{}".format(programFilesFolder, author, name)
+            self.initial_target_dir = r"[{}]\{}\{}".format(
+                programFilesFolder, author, name)
         if self.add_to_path is None:
             self.add_to_path = False
         if self.target_name is None:
@@ -138,8 +140,10 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         if not build_found:
             raise EnvironmentError('Unable to identify build directory!')
 
-        self.bdist_dir = os.path.join(self.bdist_dir, build_exe.build_dir())
-        self.build_temp = os.path.join(ntpath.dirname(self.bdist_dir), 'temp' + ntpath.basename(self.bdist_dir)[3:])
+        self.bdist_dir = os.path.join(self.bdist_dir, build_dir())
+        self.build_temp = os.path.join(
+            ntpath.dirname(self.bdist_dir),
+            'temp' + ntpath.basename(self.bdist_dir)[3:])
         self.height = 270
 
     def initialize_options(self):
@@ -167,7 +171,11 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
     def _generate_bool(bool):
         return 'yes' if bool else 'no'
 
-    def _generate_element(self, directory, subdirs={}, component_group=None, root=False):
+    def _generate_element(self,
+                          directory,
+                          subdirs={},
+                          component_group=None,
+                          root=False):
         if root:
             attr = {
                 'Id': directory,
@@ -181,33 +189,38 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
 
         for name, subdir in subdirs.items():
             if type(subdir) is dict:
-                element.append(self._generate_element(name, subdir, component_group))
+                element.append(
+                    self._generate_element(name, subdir, component_group))
             else:
                 component_id = self._generate_id()
                 component = le.Element('Component', {
                     'Id': component_id,
                     'Guid': '*',
                 })
-                component.append(le.Element('Shortcut', {
-                    'Id': self._generate_id(),
-                    'Name': name,
-                    'Target': '[INSTALLDIR]{}.exe'.format(subdir),
-                    'WorkingDirectory': 'INSTALLDIR',
-                }))
-                component.append(le.Element('RegistryValue', {
-                    'Root': 'HKCU',
-                    'Key': 'Software\$(var.Author)\$(var.ProductName)',
-                    'Name': '{{{}}}'.format(str(uuid.uuid1())),
-                    'Type': 'string',
-                    'Value': 'installed',
-                    'KeyPath': self._generate_bool(True),
-                }))
+                component.append(
+                    le.Element('Shortcut', {
+                        'Id': self._generate_id(),
+                        'Name': name,
+                        'Target': '[INSTALLDIR]{}.exe'.format(subdir),
+                        'WorkingDirectory': 'INSTALLDIR',
+                    }))
+                component.append(
+                    le.Element(
+                        'RegistryValue', {
+                            'Root': 'HKCU',
+                            'Key': 'Software\$(var.Author)\$(var.ProductName)',
+                            'Name': '{{{}}}'.format(str(uuid.uuid1())),
+                            'Type': 'string',
+                            'Value': 'installed',
+                            'KeyPath': self._generate_bool(True),
+                        }))
                 element.append(component)
 
                 if component_group is not None:
-                    component_group.append(le.Element('ComponentRef', {
-                        'Id': component_id,
-                    }))
+                    component_group.append(
+                        le.Element('ComponentRef', {
+                            'Id': component_id,
+                        }))
 
         return element
 
@@ -217,8 +230,10 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         for shortcut in self.shortcuts:
             shortcut = shortcut.split('=')
             shortcut_target = shortcut[1].strip()
-            shortcut_dirs = self._split_path(os.path.dirname(shortcut[0].strip()))
-            shortcut_name = os.path.basename(shortcut[0].strip())  # not efficient, but more readable
+            shortcut_dirs = self._split_path(
+                os.path.dirname(shortcut[0].strip()))
+            shortcut_name = os.path.basename(
+                shortcut[0].strip())  # not efficient, but more readable
 
             subtree = tree
             for shortcut_dir in shortcut_dirs:
@@ -246,7 +261,8 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         wix[1].append(component_group)
 
         for name, subdirs in tree.items():
-            directory_ref.append(self._generate_element(name, subdirs, component_group, True))
+            directory_ref.append(
+                self._generate_element(name, subdirs, component_group, True))
 
         wix.insert(0, le.ProcessingInstruction('include', 'Globals.wxs'))
 
@@ -255,7 +271,8 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
 
     def _repair_harvest(self):
         doc = le.parse('Directory.wxs')
-        elems = doc.xpath('//*[@Name="{}"]'.format(os.path.basename(self.bdist_dir)))
+        elems = doc.xpath(
+            '//*[@Name="{}"]'.format(os.path.basename(self.bdist_dir)))
         assert len(elems) == 1
         elem = elems[0]
         parent = elem.getparent()
@@ -273,16 +290,22 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         fullname = self.distribution.get_name()
 
         variables = {
-            'ProductVersion': version,
-            'ProductUpgradeCode': self.upgrade_code,
-            'ProductName': string.capwords(' '.join(fullname.replace('-', '_').split('_'))),
-            'Author': author,
+            'ProductVersion':
+            version,
+            'ProductUpgradeCode':
+            self.upgrade_code,
+            'ProductName':
+            string.capwords(' '.join(fullname.replace('-', '_').split('_'))),
+            'Author':
+            author,
         }
 
         include = le.Element('Include')
 
         for name, variable in variables.items():
-            include.append(le.ProcessingInstruction('define', '{} = "{}"'.format(name, variable)))
+            include.append(
+                le.ProcessingInstruction('define', '{} = "{}"'.format(
+                    name, variable)))
 
         with open('Globals.wxs', 'wb+') as f:
             f.write(le.tostring(include, pretty_print=True))
@@ -292,7 +315,10 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
             license_file.write(self.license_text)
 
         candle_arguments = ['candle', '-arch', 'x64']
-        light_arguments = ['light', '-ext', 'WixUIExtension', '-cultures:en-us', '-dWixUILicenseRtf=License.rtf']
+        light_arguments = [
+            'light', '-ext', 'WixUIExtension', '-cultures:en-us',
+            '-dWixUILicenseRtf=License.rtf'
+        ]
 
         for name in names:
             candle_arguments.append('{}.wxs'.format(name))
@@ -302,7 +328,6 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
 
         for args in [candle_arguments, light_arguments]:
             pywix.call_wix_command(args)
-
 
     def run(self):
         # self.skip_build = True
@@ -330,12 +355,18 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         ]
 
         for file in files:
-            shutil.copy(resource_filename('subzero.resources', '{}.wxs'.format(file)), self.build_temp)
+            shutil.copy(
+                resource_filename('subzero.resources', '{}.wxs'.format(file)),
+                self.build_temp)
 
-        shutil.copy(resource_filename('subzero.resources', 'HeatTransform.xslt'), self.build_temp)
+        shutil.copy(
+            resource_filename('subzero.resources', 'HeatTransform.xslt'),
+            self.build_temp)
         with open(os.path.join(self.build_temp, 'remove_burn.js'), 'w+') as f:
-            f.write(resource_string('subzero.resources', 'remove_burn.js').decode()
-                    .replace('upgrade_code', self.upgrade_code).replace('\n', '\r\n'))
+            f.write(
+                resource_string('subzero.resources', 'remove_burn.js')
+                .decode().replace('upgrade_code', self.upgrade_code).replace(
+                    '\n', '\r\n'))
 
         files.extend([
             'Directory',
@@ -344,9 +375,13 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
 
         os.chdir(build_temp)
         os.environ['bdist_dir'] = bdist_dir
-        print(pywix.call_wix_command(['heat', 'dir', bdist_dir, '-cg', 'ApplicationFiles',
-                                      '-gg', '-sfrag', '-sreg', '-dr', 'INSTALLDIR', '-var', 'env.bdist_dir',
-                                      '-t', 'HeatTransform.xslt', '-out', 'Directory.wxs']))
+        print(
+            pywix.call_wix_command([
+                'heat', 'dir', bdist_dir, '-cg', 'ApplicationFiles', '-gg',
+                '-sfrag', '-sreg', '-dr', 'INSTALLDIR', '-var',
+                'env.bdist_dir', '-t', 'HeatTransform.xslt', '-out',
+                'Directory.wxs'
+            ]))
 
         # we need to remove the root directory that heat puts in
         self._repair_harvest()
