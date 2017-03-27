@@ -59,7 +59,7 @@ setup(...
       entry_points={
           'console_scripts': [
               'my_project = hello_world.__main__:main',
-              Executable('gui = hello_world.__main__:gui', icon_file='Sample.ico', windowed=False),
+              Executable('gui = hello_world.__main__:gui', icon_file='Sample.ico', console=False),
           ]
       },
 ...)
