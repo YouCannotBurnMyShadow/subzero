@@ -19,7 +19,7 @@ from packaging import version
 from pkg_resources import EntryPoint, Requirement
 from pyspin.spin import make_spin, Spin1
 
-from .utils import suppress, makespec_args, decode, is_binary, rename_script, build_dir, entry_keys
+from .utils import suppress, makespec_args, decode, is_binary, rename_script, build_dir, entry_keys, move_tree
 
 
 class build_exe(distutils.core.Command):
@@ -127,7 +127,7 @@ class build_exe(distutils.core.Command):
             options['datas'][i][0] = os.path.abspath(options['datas'][i][0])
 
         if not self.optimize_imports:
-            self.discover_dependencies(options)
+            self._discover_dependencies(options)
 
         executables = []
         for script, executable in zip(scripts, self.executables):
@@ -147,11 +147,11 @@ class build_exe(distutils.core.Command):
             self._freeze(executable, self.build_temp, self.build_exe)
 
         for name in names[1:]:
-            self.move_tree(
+            move_tree(
                 os.path.join(self.build_exe, name),
                 os.path.join(self.build_exe, names[0]))
 
-        self.move_tree(os.path.join(self.build_exe, names[0]), self.build_exe)
+        move_tree(os.path.join(self.build_exe, names[0]), self.build_exe)
 
         shutil.rmtree(self.build_temp, ignore_errors=True)
 
@@ -228,7 +228,7 @@ class build_exe(distutils.core.Command):
 
         return module_files, binary_files
 
-    def discover_dependencies(self, options):
+    def _discover_dependencies(self, options):
         module_files = self._compile_modules()
         required_module_files, required_binary_files = self._compile_requirements(
         )
@@ -245,37 +245,9 @@ class build_exe(distutils.core.Command):
 
         options['pathex'] = list(set(options['pathex']))
 
-    @staticmethod
-    def move_tree(sourceRoot, destRoot):
-        if not os.path.exists(destRoot):
-            return False
-        ok = True
-        for path, dirs, files in os.walk(sourceRoot):
-            relPath = os.path.relpath(path, sourceRoot)
-            destPath = os.path.join(destRoot, relPath)
-            if not os.path.exists(destPath):
-                os.makedirs(destPath)
-            for file in files:
-                destFile = os.path.join(destPath, file)
-                if os.path.isfile(destFile):
-                    print("Skipping existing file: {}".format(
-                        os.path.join(relPath, file)))
-                    ok = False
-                    continue
-                srcFile = os.path.join(path, file)
-                # print "rename", srcFile, destFile
-                os.rename(srcFile, destFile)
-        for path, dirs, files in os.walk(sourceRoot, False):
-            if len(files) == 0 and len(dirs) == 0:
-                os.rmdir(path)
-        return ok
-
     def _generate_script(self, entry_point, workpath):
         """
         Generates a script given an entry point.
-        :param entry_point:
-        :param workpath:
-        :return: The script location
         """
 
         # note that build_scripts appears to work sporadically

@@ -87,3 +87,28 @@ def rename_script(executable):
 
 def build_dir():
     return "exe.{}-{}".format(distutils.util.get_platform(), sys.version[0:3])
+
+
+def move_tree(source, destination):
+    if not os.path.exists(destination):
+        return False
+    ok = True
+    for path, dirs, files in os.walk(source):
+        relPath = os.path.relpath(path, source)
+        destPath = os.path.join(destination, relPath)
+        if not os.path.exists(destPath):
+            os.makedirs(destPath)
+        for file in files:
+            destFile = os.path.join(destPath, file)
+            if os.path.isfile(destFile):
+                print("Skipping existing file: {}".format(
+                    os.path.join(relPath, file)))
+                ok = False
+                continue
+            srcFile = os.path.join(path, file)
+            # print "rename", srcFile, destFile
+            os.rename(srcFile, destFile)
+    for path, dirs, files in os.walk(source, False):
+        if len(files) == 0 and len(dirs) == 0:
+            os.rmdir(path)
+    return ok
