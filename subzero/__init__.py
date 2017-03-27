@@ -9,7 +9,6 @@ except ImportError:
     from distutils.core import setup as distutils_setup
 
 from subzero.dist import build_exe, Executable
-from subzero.windist import bdist_msi
 from pyspin.spin import make_spin, Spin1
 
 version = "5.0"
@@ -34,8 +33,8 @@ def install_requirements(requirements):
 def setup(**attrs):
     commandClasses = attrs.setdefault("cmdclass", {})
     if sys.platform == "win32":
-        if sys.version_info[:2] >= (2, 5):
-            _AddCommandClass(commandClasses, "bdist_msi", bdist_msi)
+        from subzero.windist import bdist_msi
+        _AddCommandClass(commandClasses, "bdist_msi", bdist_msi)
     _AddCommandClass(commandClasses, "build_exe", build_exe)
     if 'install_requires' in attrs and attrs['install_requires']:
         install_requirements(attrs['install_requires'])
