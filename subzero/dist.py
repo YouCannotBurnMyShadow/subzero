@@ -74,11 +74,14 @@ class build_exe(distutils.core.Command):
 
     def run(self):
         entry_points = {}
+        gui_scripts = []
 
         entry_points_map = EntryPoint.parse_map(self.distribution.entry_points)
         for entry_key in entry_keys:
             with suppress(KeyError):
                 entry_points.update(entry_points_map[entry_key])
+                if entry_key == 'gui_scripts':
+                    gui_scripts.extend(entry_points_map[entry_key].keys())
 
         try:
             options = {}
@@ -136,6 +139,8 @@ class build_exe(distutils.core.Command):
             executable._options = dict(options, **executable.options)
             executable._options['name'] = '.'.join(
                 ntpath.basename(script).split('.')[:-1])
+            if executable._options['name'] in gui_scripts:
+                executable._options['console'] = False
 
             executables.append(executable)
 
