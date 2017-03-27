@@ -17,4 +17,4 @@ setup(
             'optimize_imports': False,
         },
     },
-    install_requires=['bleach'])
+    install_requires=['bleach==1.4.3'])
