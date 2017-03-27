@@ -24,14 +24,27 @@ def _AddCommandClass(commandClasses, name, cls):
 @make_spin(Spin1, 'Installing project requirements...')
 def install_requirements(requirements):
     command = [sys.executable, '-m', 'pip', 'install', '--user'] + requirements
-    try: 
+    try:
         subprocess.check_output(command, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         print(e.output)
         raise e
 
 
+def append_scripts(scripts, attrs):
+    for script in scripts:
+        if isinstance(script, Executable):
+            attrs['options']['build_exe']['executables'].append(script)
+        else:
+            attrs['options']['build_exe']['executables'].append(None)
+
+
 def setup(**attrs):
+    entry_points_keys = [
+        'console_scripts',
+        'gui_scripts',
+    ]
+
     commandClasses = attrs.setdefault("cmdclass", {})
     if sys.platform == "win32":
         if sys.version_info[:2] >= (2, 5):
@@ -41,19 +54,21 @@ def setup(**attrs):
         install_requirements(attrs['install_requires'])
 
     attrs.setdefault('scripts', [])
-    attrs.setdefault('entry_points', {}).setdefault('console_scripts', [])
     attrs.setdefault('options', {}).setdefault('build_exe', {}).setdefault(
         'executables', [])
 
-    for script in attrs['scripts'] + attrs['entry_points']['console_scripts']:
-        if type(script) is Executable:
-            attrs['options']['build_exe']['executables'].append(script)
-        else:
-            attrs['options']['build_exe']['executables'].append(None)
+    append_scripts(attrs['scripts'], attrs)
+
+    for entry_point_key in entry_points_keys:
+        attrs.setdefault('entry_points', {}).setdefault(entry_point_key, [])
+        append_scripts(attrs['entry_points'][entry_point_key], attrs)
+
+        attrs['entry_points'][entry_point_key] = [
+            str(entry_point)
+            for entry_point in attrs['entry_points'][entry_point_key]
+        ]
 
     attrs['scripts'] = [str(script) for script in attrs['scripts']]
-    attrs['entry_points']['console_scripts'] = \
-        [str(entry_point) for entry_point in attrs['entry_points']['console_scripts']]
 
     distutils_setup(**attrs)
 
