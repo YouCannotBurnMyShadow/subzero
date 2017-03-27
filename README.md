@@ -6,7 +6,7 @@
 
 ## What is Subzero?
 
-The goal of subzero is allo allow simple and rapid deployment of [frozen][1] Python applications with minimal
+The goal of subzero is to allow simple and rapid deployment of [frozen][1] Python applications with minimal
 additional effort and developer time. In contrast to other solutions, subzero's philosophy is that having a 
 working application, quickly is more important than optimizing for size or other factors and that generating
 your end product (be it and MSI, or other installer) should take only a few minutes to set up. Subzero builds
