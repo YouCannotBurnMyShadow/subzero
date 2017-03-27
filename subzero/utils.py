@@ -10,6 +10,7 @@ import inspect
 import uuid
 import os
 import distutils
+import deepmerge
 
 entry_keys = [
     'console_scripts',
@@ -23,38 +24,19 @@ excluded_args = [
 
 
 def merge_defaults(a, b):
-    """merges b into a and return merged result"""
-    key = None
-    try:
-        if a is None or isinstance(a, str) or isinstance(a, int) or isinstance(
-                a, float):
-            # border case for first run or if a is a primitive
-            a = b
-        elif isinstance(a, list):
-            # lists can be only appended
-            if isinstance(b, list):
-                # merge lists
-                a.extend(b)
-            else:
-                # append to list
-                a.append(b)
-        elif isinstance(a, dict):
-            # dicts must be merged
-            if isinstance(b, dict):
-                for key in b:
-                    if key in a:
-                        a[key] = merge_defaults(a[key], b[key])
-                    else:
-                        a[key] = b[key]
-            else:
-                raise RuntimeError(
-                    'Cannot merge non-dict "%s" into dict "%s"' % (b, a))
-        else:
-            raise RuntimeError('NOT IMPLEMENTED "%s" into "%s"' % (b, a))
-    except TypeError as e:
-        raise RuntimeError(
-            'TypeError "%s" in key "%s" when merging "%s" into "%s"' % (e, key,
-                                                                        b, a))
+    merger = deepmerge.Merger(
+        # pass in a list of tuple, with the
+        # strategies you are looking to apply
+        # to each type.
+        [(list, ["append"]), (dict, ["merge"])],
+        # next, choose the fallback strategies,
+        # applied to all other types:
+        ["override"],
+        # finally, choose the strategies in
+        # the case where the types conflict:
+        ["override"])
+
+    merger.merge(a, b)
     return a
 
 
@@ -92,7 +74,6 @@ def build_dir():
 def move_tree(source, destination):
     if not os.path.exists(destination):
         return False
-    ok = True
     for path, dirs, files in os.walk(source):
         relPath = os.path.relpath(path, source)
         destPath = os.path.join(destination, relPath)
@@ -101,14 +82,9 @@ def move_tree(source, destination):
         for file in files:
             destFile = os.path.join(destPath, file)
             if os.path.isfile(destFile):
-                print("Skipping existing file: {}".format(
-                    os.path.join(relPath, file)))
-                ok = False
                 continue
             srcFile = os.path.join(path, file)
-            # print "rename", srcFile, destFile
             os.rename(srcFile, destFile)
     for path, dirs, files in os.walk(source, False):
         if len(files) == 0 and len(dirs) == 0:
             os.rmdir(path)
-    return ok
