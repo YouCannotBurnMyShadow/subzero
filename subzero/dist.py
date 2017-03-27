@@ -118,7 +118,7 @@ class build_exe(distutils.core.Command):
             entry_points = EntryPoint.parse_map(
                 self.distribution.entry_points)['console_scripts']
         except KeyError:
-            entry_points = []
+            entry_points = {}
         try:
             options = {}
             for key, value in dict(
