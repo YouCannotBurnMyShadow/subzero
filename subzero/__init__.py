@@ -61,12 +61,12 @@ def setup(**attrs):
             attrs['entry_points'][entry_key] for entry_key in entry_keys
     ]:
         if isinstance(script, Executable):
+
             attrs['options']['build_exe']['executables'].append(script)
         else:
             attrs['options']['build_exe']['executables'].append(None)
 
     attrs['scripts'] = [str(script) for script in attrs['scripts']]
-
     for entry_key in entry_keys:
         attrs['entry_points'][entry_key] = [
             str(entry_point)
