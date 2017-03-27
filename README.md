@@ -1,24 +1,17 @@
 # subzero
 
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/1568bcb5178b4e4d80dae7840df03f08)](https://www.codacy.com/app/pywin32/subzero?utm_source=github.com&utm_medium=referral&utm_content=xoviat/subzero&utm_campaign=badger)
+[![Codacy Badge][6]][7]
 [![build status][2]][3]
 [![Codecov][5]][4]
 
 ## What is Subzero?
 
-Subzero allows you to rapidly deploy your [frozen][1] Python application with minimal effort and additional
-code. Subzero does this by providing a simple and intuitive wrapper for PyInstaller coupled with an MSI
-builder. With a few lines of code and a single command, you can go directly from Python code to a compiled MSI
-installer.
-
-In the future, subzero will intelligently precompile python modules with nuitka so that the compiled binary
-actually runs faster than the original python code.
-
-[1]: http://docs.python-guide.org/en/latest/shipping/freezing/
-[2]: https://ci.appveyor.com/api/projects/status/github/xoviat/subzero?branch=master&svg=true
-[3]: https://ci.appveyor.com/project/xoviat/pyinstaller-utils
-[4]: https://codecov.io/gh/xoviat/subzero
-[5]: https://img.shields.io/codecov/c/github/xoviat/subzero.svg?style=flat
+The goal of subzero is to allow simple and rapid deployment of [frozen][1] Python applications with minimal
+additional effort and developer time. In contrast to other solutions, subzero's philosophy is that having a 
+working application, quickly is more important than optimizing for size or other factors and that generating
+your end product (be it and MSI, or other installer) should take only a few minutes to set up. Subzero builds
+on the extensive development work of other projects, and doesn't re-invent the wheel. Rather, it ties everything
+together in a simple and intuitive manner.
 
 ## How do I install it?
 
@@ -66,7 +59,7 @@ setup(...
       entry_points={
           'console_scripts': [
               'my_project = hello_world.__main__:main',
-              Executable('gui = hello_world.__main__:gui', icon_file='Sample.ico', windowed=False),
+              Executable('gui = hello_world.__main__:gui', icon_file='Sample.ico', console=False),
           ]
       },
 ...)
@@ -120,3 +113,12 @@ setup(
         )
     ])
 ```
+
+
+[1]: http://docs.python-guide.org/en/latest/shipping/freezing/
+[2]: https://ci.appveyor.com/api/projects/status/github/xoviat/subzero?branch=master&svg=true
+[3]: https://ci.appveyor.com/project/xoviat/pyinstaller-utils
+[4]: https://codecov.io/gh/xoviat/subzero
+[5]: https://img.shields.io/codecov/c/github/xoviat/subzero.svg?style=flat
+[6]: https://api.codacy.com/project/badge/Grade/1568bcb5178b4e4d80dae7840df03f08
+[7]: https://www.codacy.com/app/pywin32/subzero?utm_source=github.com&utm_medium=referral&utm_content=xoviat/subzero&utm_campaign=badger
