@@ -29,6 +29,8 @@ entry_keys = [
     'gui_scripts',
 ]
 
+# FIXME: Move all static methods into utils
+
 
 class build_exe(distutils.core.Command):
     description = "build executables from Python scripts"
@@ -119,11 +121,11 @@ class build_exe(distutils.core.Command):
     def run(self):
         entry_points = {}
 
-        try:
-            entry_points = EntryPoint.parse_map(
-                self.distribution.entry_points)['console_scripts']
-        except KeyError:
-            entry_points = {}
+        entry_points_map = EntryPoint.parse_map(self.distribution.entry_points)
+        for entry_key in entry_keys:
+            with suppress(KeyError):
+                entry_points.update(entry_points_map[entry_key])
+
         try:
             options = {}
             for key, value in dict(
