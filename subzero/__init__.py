@@ -23,6 +23,9 @@ def _AddCommandClass(commandClasses, name, cls):
 
 @make_spin(Spin1, 'Installing project requirements...')
 def install_requirements(requirements):
+    if not requirements:
+        return
+
     command = [sys.executable, '-m', 'pip', 'install', '--user'] + requirements
     try:
         subprocess.check_output(command, stderr=subprocess.STDOUT)
@@ -31,44 +34,85 @@ def install_requirements(requirements):
         raise e
 
 
-def append_scripts(scripts, attrs):
-    for script in scripts:
+def merge_defaults(a, b):
+    """merges b into a and return merged result"""
+    key = None
+    try:
+        if a is None or isinstance(a, str) or isinstance(a, int) or isinstance(
+                a, float):
+            # border case for first run or if a is a primitive
+            a = b
+        elif isinstance(a, list):
+            # lists can be only appended
+            if isinstance(b, list):
+                # merge lists
+                a.extend(b)
+            else:
+                # append to list
+                a.append(b)
+        elif isinstance(a, dict):
+            # dicts must be merged
+            if isinstance(b, dict):
+                for key in b:
+                    if key in a:
+                        a[key] = merge_defaults(a[key], b[key])
+                    else:
+                        a[key] = b[key]
+            else:
+                raise RuntimeError(
+                    'Cannot merge non-dict "%s" into dict "%s"' % (b, a))
+        else:
+            raise RuntimeError('NOT IMPLEMENTED "%s" into "%s"' % (b, a))
+    except TypeError as e:
+        raise RuntimeError(
+            'TypeError "%s" in key "%s" when merging "%s" into "%s"' % (e, key,
+                                                                        b, a))
+    return a
+
+
+def setup(**attrs):
+    entry_keys = [
+        'console_scripts',
+        'gui_scripts',
+    ]
+
+    defaults = {
+        'cmdclass': {},
+        'install_requires': [],
+        'scripts': [],
+        'entry_points': {entry_key: []
+                         for entry_key in entry_keys},
+        'options': {
+            'build_exe': {
+                'executables': [],
+            },
+        },
+    }
+
+    attrs = merge_defaults(attrs, defaults)
+
+    if sys.platform == "win32":
+        if sys.version_info[:2] >= (2, 5):
+            _AddCommandClass(attrs['cmdclass'], "bdist_msi", bdist_msi)
+    _AddCommandClass(attrs['cmdclass'], "build_exe", build_exe)
+
+    install_requirements(attrs['install_requires'])
+
+    for script in attrs['scripts'] + [
+            attrs['entry_points'][entry_key] for entry_key in entry_keys
+    ]:
         if isinstance(script, Executable):
             attrs['options']['build_exe']['executables'].append(script)
         else:
             attrs['options']['build_exe']['executables'].append(None)
 
-
-def setup(**attrs):
-    entry_points_keys = [
-        'console_scripts',
-        'gui_scripts',
-    ]
-
-    commandClasses = attrs.setdefault("cmdclass", {})
-    if sys.platform == "win32":
-        if sys.version_info[:2] >= (2, 5):
-            _AddCommandClass(commandClasses, "bdist_msi", bdist_msi)
-    _AddCommandClass(commandClasses, "build_exe", build_exe)
-    if 'install_requires' in attrs and attrs['install_requires']:
-        install_requirements(attrs['install_requires'])
-
-    attrs.setdefault('scripts', [])
-    attrs.setdefault('options', {}).setdefault('build_exe', {}).setdefault(
-        'executables', [])
-
-    append_scripts(attrs['scripts'], attrs)
-
-    for entry_point_key in entry_points_keys:
-        attrs.setdefault('entry_points', {}).setdefault(entry_point_key, [])
-        append_scripts(attrs['entry_points'][entry_point_key], attrs)
-
-        attrs['entry_points'][entry_point_key] = [
-            str(entry_point)
-            for entry_point in attrs['entry_points'][entry_point_key]
-        ]
-
     attrs['scripts'] = [str(script) for script in attrs['scripts']]
+
+    for entry_key in entry_keys:
+        attrs['entry_points'][entry_key] = [
+            str(entry_point)
+            for entry_point in attrs['entry_points'][entry_key]
+        ]
 
     distutils_setup(**attrs)
 
