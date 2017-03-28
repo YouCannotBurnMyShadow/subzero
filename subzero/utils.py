@@ -92,11 +92,17 @@ def move_tree(source, destination):
 
 
 def generate_id():
+    """
+    generates a component ID
+    """
     return 'cmp{}'.format(str(uuid.uuid1()).replace('-', '').upper())
 
 
-def generate_bool(bool):
-    return 'yes' if bool else 'no'
+def generate_bool(b):
+    """
+    returns yes if True, otherwise no
+    """
+    return 'yes' if b else 'no'
 
 
 def split_path(self, path):
