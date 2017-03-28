@@ -3,17 +3,11 @@ import distutils.errors
 import distutils.util
 import ntpath
 import os
-import re
 import shutil
-import string
-import uuid
-import textwrap
-from io import StringIO
+import json
 
-import pywix
-from pkg_resources import resource_filename, resource_string
+import go_msi
 
-from .dist import build_exe
 from .utils import build_dir, enter_directory
 
 __all__ = ["bdist_msi"]
@@ -91,24 +85,54 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                 self.license_text = self._license_text(open(file))
                 break
 
-    def _compile(self, names, out):
-        with open('License.rtf', 'w+') as license_file:
-            license_file.write(self.license_text)
+    def _write_json(self, fh):
+        config = {
+            "product": "go-msi",
+            "company": "mh-cbon",
+            "license": "LICENSE",
+            "upgrade-code": "8615055C-D8E0-404C-93BE-441C503BA6F0",
+            "files": {
+                "guid": "378896D8-6749-4821-870A-44CBBB791D0C",
+                "items": ["go-msi.exe"]
+            },
+            "directories": ["templates"],
+            "env": {
+                "guid":
+                "0CB88C7F-85A7-4986-B6CE-1CAD5C17EA0E",
+                "vars": [{
+                    "name": "PATH",
+                    "value": "[INSTALLDIR]",
+                    "permanent": "no",
+                    "system": "no",
+                    "action": "set",
+                    "part": "last"
+                }]
+            },
+            "shortcuts": {
+                "guid":
+                "6DAFD205-3D2D-43D7-BF78-33BFE8746D2A",
+                "items": [{
+                    "name": "go-msi",
+                    "description": "Easy msi pakage for Go",
+                    "target": "[INSTALLDIR]\\go-msi.exe",
+                    "wdir": "INSTALLDIR",
+                    "arguments": ""
+                }]
+            },
+            "choco": {
+                "description":
+                "Easy way to generate msi package for a Go project",
+                "project-url":
+                "https://github.com/mh-cbon/go-msi",
+                "tags":
+                "generate go msi nuget",
+                "license-url":
+                "https://github.com/mh-cbon/go-msi/blob/master/LICENSE"
+            }
+        }
 
-        candle_arguments = ['candle', '-arch', 'x64']
-        light_arguments = [
-            'light', '-ext', 'WixUIExtension', '-cultures:en-us',
-            '-dWixUILicenseRtf=License.rtf'
-        ]
-
-        for name in names:
-            candle_arguments.append('{}.wxs'.format(name))
-            light_arguments.append('{}.wixobj'.format(name))
-
-        light_arguments.extend(['-out', out])
-
-        for args in [candle_arguments, light_arguments]:
-            pywix.call_wix_command(args)
+        # write the file
+        json.dump(config, fh)
 
     def run(self):
         # self.skip_build = True
@@ -126,38 +150,13 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
 
         os.makedirs(self.build_temp, exist_ok=True)
 
-        current_directory = os.getcwd()
         # Resolve all directory names here
         build_temp = os.path.abspath(self.build_temp)
         bdist_dir = os.path.abspath(self.bdist_dir)
         target_name = os.path.abspath(self.target_name)
-        files = [
-            'Product',
-        ]
 
-        for file in files:
-            shutil.copy(
-                resource_filename('subzero.resources', '{}.wxs'.format(file)),
-                self.build_temp)
+        with open(os.path.join(self.build_temp, 'wix.json')) as fh:
+            self._write_json(fh)
 
         with enter_directory(self.build_temp):
-            os.environ['bdist_dir'] = bdist_dir
-            print(
-                pywix.call_wix_command([
-                    'heat', 'dir', bdist_dir, '-cg', 'ApplicationFiles', '-gg',
-                    '-sfrag', '-sreg', '-dr', 'INSTALLDIR', '-var',
-                    'env.bdist_dir', '-t', 'HeatTransform.xslt', '-out',
-                    'Directory.wxs'
-                ]))
-
-            # we need to remove the root directory that heat puts in
-            self._repair_harvest()
-            self._generate_shortcuts()
-            self._generate_globals()
-            self._compile(files, target_name)
-
-            wixpdb_name = '{}.wixpdb'.format(os.path.splitext(target_name)[0])
-            try:
-                shutil.move(wixpdb_name, build_temp)
-            except OSError:
-                pass
+            go_msi.call_go_msi([])
