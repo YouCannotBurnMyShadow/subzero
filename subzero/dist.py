@@ -18,6 +18,7 @@ from PyInstaller.utils.hooks import collect_submodules, get_module_file_attribut
 from packaging import version
 from pkg_resources import EntryPoint, Requirement
 from pyspin.spin import make_spin, Spin1
+from copy import copy
 
 from .utils import suppress, makespec_args, decode, is_binary, rename_script, build_dir, entry_keys, move_tree
 
@@ -91,7 +92,8 @@ class build_exe(distutils.core.Command):
         except (KeyError, TypeError):
             options = {}
 
-        scripts = self.distribution.scripts
+        scripts = copy(self.distribution.scripts)
+        self.distribution.scripts = []
         for required_directory in [self.build_temp, self.build_exe]:
             shutil.rmtree(required_directory, ignore_errors=True)
             os.makedirs(required_directory, exist_ok=True)
@@ -269,6 +271,9 @@ class build_exe(distutils.core.Command):
                 entry_point.attrs)))
             for package in self.distribution.packages:
                 fh.write("import {0}\n".format(package))
+
+            fh.seek(0)
+            assert '==' not in fh.read()
 
         # Removed: requirements cannot be assumed to be packages
         #  + self.distribution.install_requires

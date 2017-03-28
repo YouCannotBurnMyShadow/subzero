@@ -1,13 +1,10 @@
 import subprocess
 import sys
+import itertools
 
-import subzero.dist
+from setuptools import setup as distutils_setup
 
-try:
-    from setuptools import setup as distutils_setup
-except ImportError:
-    from distutils.core import setup as distutils_setup
-
+from . import dist
 from .dist import build_exe, Executable, entry_keys
 from .utils import merge_defaults
 from pyspin.spin import make_spin, Spin1
@@ -57,9 +54,10 @@ def setup(**attrs):
 
     install_requirements(attrs['install_requires'])
 
-    for script in attrs['scripts'] + [
-            attrs['entry_points'][entry_key] for entry_key in entry_keys
-    ]:
+    for script in attrs['scripts'] + list(
+            itertools.chain(* [
+                attrs['entry_points'][entry_key] for entry_key in entry_keys
+            ])):
         if isinstance(script, Executable):
 
             attrs['options']['build_exe']['executables'].append(script)
@@ -75,8 +73,6 @@ def setup(**attrs):
 
     distutils_setup(**attrs)
 
-
-subzero.dist.setup = setup  # Backwards compatibility
 
 from ._version import get_versions
 
