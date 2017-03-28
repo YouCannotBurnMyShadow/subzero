@@ -14,7 +14,7 @@ import pywix
 from pkg_resources import resource_filename, resource_string
 
 from .dist import build_exe
-from .utils import build_dir
+from .utils import build_dir, enter_directory
 
 __all__ = ["bdist_msi"]
 
@@ -140,26 +140,24 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                 resource_filename('subzero.resources', '{}.wxs'.format(file)),
                 self.build_temp)
 
-        os.chdir(build_temp)
-        os.environ['bdist_dir'] = bdist_dir
-        print(
-            pywix.call_wix_command([
-                'heat', 'dir', bdist_dir, '-cg', 'ApplicationFiles', '-gg',
-                '-sfrag', '-sreg', '-dr', 'INSTALLDIR', '-var',
-                'env.bdist_dir', '-t', 'HeatTransform.xslt', '-out',
-                'Directory.wxs'
-            ]))
+        with enter_directory(self.build_temp):
+            os.environ['bdist_dir'] = bdist_dir
+            print(
+                pywix.call_wix_command([
+                    'heat', 'dir', bdist_dir, '-cg', 'ApplicationFiles', '-gg',
+                    '-sfrag', '-sreg', '-dr', 'INSTALLDIR', '-var',
+                    'env.bdist_dir', '-t', 'HeatTransform.xslt', '-out',
+                    'Directory.wxs'
+                ]))
 
-        # we need to remove the root directory that heat puts in
-        self._repair_harvest()
-        self._generate_shortcuts()
-        self._generate_globals()
-        self._compile(files, target_name)
+            # we need to remove the root directory that heat puts in
+            self._repair_harvest()
+            self._generate_shortcuts()
+            self._generate_globals()
+            self._compile(files, target_name)
 
-        wixpdb_name = '{}.wixpdb'.format(os.path.splitext(target_name)[0])
-        try:
-            shutil.move(wixpdb_name, build_temp)
-        except OSError:
-            pass
-
-        os.chdir(current_directory)
+            wixpdb_name = '{}.wixpdb'.format(os.path.splitext(target_name)[0])
+            try:
+                shutil.move(wixpdb_name, build_temp)
+            except OSError:
+                pass

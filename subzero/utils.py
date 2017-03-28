@@ -12,6 +12,7 @@ import os
 import distutils
 import deepmerge
 import pathlib
+from contextlib import contextmanager
 
 entry_keys = [
     'console_scripts',
@@ -105,5 +106,13 @@ def generate_bool(b):
     return 'yes' if b else 'no'
 
 
-def split_path(self, path):
+def split_path(path):
     return list(pathlib.Path(path).parts)
+
+
+@contextmanager
+def enter_directory(path):
+    current_directory = os.getcwd()
+    os.chdir(path)
+    yield
+    os.chdir(current_directory)
