@@ -25,7 +25,8 @@ def test_hello_world():
     if not build_dir:
         raise ValueError('Unable to locate build directory!')
 
-    output = subprocess.check_output([os.path.join('build', build_dir, 'my_project.exe')])
+    output = subprocess.check_output(
+        [os.path.join('build', build_dir, 'my_project.exe')])
 
     assert output == b'Script executed successfully!\r\n'
 
@@ -41,7 +42,8 @@ def test_imports():
     if not build_dir:
         raise ValueError('Unable to locate build directory!')
 
-    output = subprocess.check_output([os.path.join('build', build_dir, 'my_project.exe')])
+    output = subprocess.check_output(
+        [os.path.join('build', build_dir, 'my_project.exe')])
 
     assert output == b'Script executed successfully!\r\n'
 
@@ -57,11 +59,15 @@ def test_bdist_msi():
     dist_file = os.path.abspath(dist_file)
     dest_dir = tempfile.mkdtemp()
 
-    MSIEXEC_COMMAND = 'msiexec /a {MSIPath} /qb TARGETDIR={TARGETDIR}'.format(MSIPath=dist_file, TARGETDIR=dest_dir)
+    MSIEXEC_COMMAND = 'msiexec /a {MSIPath} /qb TARGETDIR={TARGETDIR}'.format(
+        MSIPath=dist_file, TARGETDIR=dest_dir)
     print(MSIEXEC_COMMAND)
 
     subprocess.call(MSIEXEC_COMMAND.split(' '))
 
-    output = subprocess.check_output([os.path.join(dest_dir, 'Mars Galactic', 'Hello World', 'my_project.exe')])
+    output = subprocess.check_output([
+        os.path.join(dest_dir, 'Mars Galactic', 'Hello World',
+                     'my_project.exe')
+    ])
 
     assert output == b'Script executed successfully!\r\n'
