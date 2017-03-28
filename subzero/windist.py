@@ -85,11 +85,16 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                 break
 
     def _write_json(self, fh):
+        license_name = 'LICENSE'
+        license_path = os.path.join(self.build_temp, license_name)
+        with open(license_path, 'w+') as lfh:
+            lfh.write(self.license_text)
+
         config = {
-            "product": "go-msi",
-            "company": "mh-cbon",
-            "license": "LICENSE",
-            "upgrade-code": "8615055C-D8E0-404C-93BE-441C503BA6F0",
+            "product": self.distribution.get_name(),
+            "company": self.distribution.get_author(),
+            "license": license_name,
+            "upgrade-code": self.upgrade_code,
             "files": {
                 "guid": "378896D8-6749-4821-870A-44CBBB791D0C",
                 "items": ["go-msi.exe"]
@@ -118,16 +123,6 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                     "arguments": ""
                 }]
             },
-            "choco": {
-                "description":
-                "Easy way to generate msi package for a Go project",
-                "project-url":
-                "https://github.com/mh-cbon/go-msi",
-                "tags":
-                "generate go msi nuget",
-                "license-url":
-                "https://github.com/mh-cbon/go-msi/blob/master/LICENSE"
-            }
         }
 
         # write the file

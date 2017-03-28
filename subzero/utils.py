@@ -92,11 +92,18 @@ def move_tree(source, destination):
             os.rmdir(path)
 
 
-def generate_id():
+def generate_guid():
+    """
+    generates a GUID
+    """
+    return str(uuid.uuid1()).upper()
+
+
+def generate_component_id():
     """
     generates a component ID
     """
-    return 'cmp{}'.format(str(uuid.uuid1()).replace('-', '').upper())
+    return 'cmp{}'.format(generate_guid()).replace('-', '')
 
 
 def generate_bool(b):
