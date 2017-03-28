@@ -1,4 +1,3 @@
-import distutils.command.bdist_msi
 import distutils.errors
 import distutils.util
 import os
@@ -9,11 +8,12 @@ import go_msi
 
 from .utils import build_dir, enter_directory
 from pyspin.spin import make_spin, Spin1
+from distutils.command.bdist_msi import bdist_msi as d_bdist_msi
 
 __all__ = ["bdist_msi"]
 
 
-class bdist_msi(distutils.command.bdist_msi.bdist_msi):
+class bdist_msi(d_bdist_msi):
     user_options = distutils.command.bdist_msi.bdist_msi.user_options + [
         ('add-to-path=', None, 'add target dir to PATH environment variable'),
         ('upgrade-code=', None, 'upgrade code to use'),
