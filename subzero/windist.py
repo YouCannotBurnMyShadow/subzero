@@ -31,11 +31,11 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         author = self.distribution.get_author()
         if self.initial_target_dir is None:
             if distutils.util.get_platform() == "win-amd64":
-                programFilesFolder = "ProgramFiles64Folder"
+                programs_folder = "ProgramFiles64Folder"
             else:
-                programFilesFolder = "ProgramFilesFolder"
+                programs_folder = "programs_folder"
             self.initial_target_dir = r"[{}]\{}\{}".format(
-                programFilesFolder, author, name)
+                programs_folder, author, name)
         if self.add_to_path is None:
             self.add_to_path = False
         if self.target_name is None:
