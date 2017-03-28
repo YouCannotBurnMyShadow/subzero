@@ -155,7 +155,7 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         bdist_dir = os.path.abspath(self.bdist_dir)
         target_name = os.path.abspath(self.target_name)
 
-        with open(os.path.join(self.build_temp, 'wix.json')) as fh:
+        with open(os.path.join(self.build_temp, 'wix.json'), 'w+') as fh:
             self._write_json(fh)
 
         with enter_directory(self.build_temp):
