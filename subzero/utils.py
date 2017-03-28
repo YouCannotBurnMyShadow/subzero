@@ -11,6 +11,7 @@ import uuid
 import os
 import distutils
 import deepmerge
+import pathlib
 
 entry_keys = [
     'console_scripts',
@@ -99,18 +100,4 @@ def generate_bool(bool):
 
 
 def split_path(self, path):
-    folders = []
-    while 1:
-        path, folder = os.path.split(path)
-
-        if folder != "":
-            folders.append(folder)
-        else:
-            if path != "":
-                folders.append(path)
-
-            break
-
-    folders.reverse()
-
-    return folders
+    return list(pathlib.Path(path).parts)
