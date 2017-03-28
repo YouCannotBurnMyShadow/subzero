@@ -30,23 +30,6 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         ('product-code=', None, 'product code to use')
     ]
 
-    def _split_path(self, path):
-        folders = []
-        while 1:
-            path, folder = os.path.split(path)
-
-            if folder != "":
-                folders.append(folder)
-            else:
-                if path != "":
-                    folders.append(path)
-
-                break
-
-        folders.reverse()
-
-        return folders
-
     def finalize_options(self):
         distutils.command.bdist_msi.bdist_msi.finalize_options(self)
         name = self.distribution.get_name()
@@ -107,14 +90,6 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
             if os.path.isfile(file):
                 self.license_text = self._license_text(open(file))
                 break
-
-    @staticmethod
-    def _generate_id():
-        return 'cmp{}'.format(str(uuid.uuid1()).replace('-', '').upper())
-
-    @staticmethod
-    def _generate_bool(bool):
-        return 'yes' if bool else 'no'
 
     def _generate_element(self,
                           directory,

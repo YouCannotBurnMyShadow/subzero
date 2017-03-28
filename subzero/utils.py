@@ -88,3 +88,29 @@ def move_tree(source, destination):
     for path, dirs, files in os.walk(source, False):
         if len(files) == 0 and len(dirs) == 0:
             os.rmdir(path)
+
+
+def generate_id():
+    return 'cmp{}'.format(str(uuid.uuid1()).replace('-', '').upper())
+
+
+def generate_bool(bool):
+    return 'yes' if bool else 'no'
+
+
+def split_path(self, path):
+    folders = []
+    while 1:
+        path, folder = os.path.split(path)
+
+        if folder != "":
+            folders.append(folder)
+        else:
+            if path != "":
+                folders.append(path)
+
+            break
+
+    folders.reverse()
+
+    return folders
