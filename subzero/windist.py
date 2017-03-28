@@ -8,6 +8,7 @@ import json
 import go_msi
 
 from .utils import build_dir, enter_directory
+from pyspin.spin import make_spin, Spin1
 
 __all__ = ["bdist_msi"]
 
@@ -84,11 +85,23 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                 self.license_text = open(file).read()
                 break
 
+    @make_spin(Spin1, 'Harvesting files...')
+    def _harvest_files(self):
+        directories = []
+        files = []
+
+        for dirpath, dirnames, filenames in os.walk(self.bdist_dir):
+            pass
+
+        return files, directories
+
     def _write_json(self, fh):
         license_name = 'LICENSE'
         license_path = os.path.join(self.build_temp, license_name)
         with open(license_path, 'w+') as lfh:
             lfh.write(self.license_text)
+
+        files, directories = self._harvest_files()
 
         config = {
             "product": self.distribution.get_name(),
@@ -97,9 +110,9 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
             "upgrade-code": self.upgrade_code,
             "files": {
                 "guid": "378896D8-6749-4821-870A-44CBBB791D0C",
-                "items": ["go-msi.exe"]
+                "items": files
             },
-            "directories": ["templates"],
+            "directories": directories,
             "env": {
                 "guid":
                 "0CB88C7F-85A7-4986-B6CE-1CAD5C17EA0E",
@@ -128,6 +141,11 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         # write the file
         json.dump(config, fh)
 
+    @make_spin(Spin1, 'Building installer...')
+    def _build_msi(self):
+        with enter_directory(self.build_temp):
+            go_msi.call_go_msi([])
+
     def run(self):
         # self.skip_build = True
         if not self.skip_build:
@@ -145,12 +163,11 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         os.makedirs(self.build_temp, exist_ok=True)
 
         # Resolve all directory names here
-        build_temp = os.path.abspath(self.build_temp)
-        bdist_dir = os.path.abspath(self.bdist_dir)
-        target_name = os.path.abspath(self.target_name)
+        # build_temp = os.path.abspath(self.build_temp)
+        # bdist_dir = os.path.abspath(self.bdist_dir)
+        # target_name = os.path.abspath(self.target_name)
 
         with open(os.path.join(self.build_temp, 'wix.json'), 'w+') as fh:
             self._write_json(fh)
 
-        with enter_directory(self.build_temp):
-            go_msi.call_go_msi([])
+        self.build_msi()
