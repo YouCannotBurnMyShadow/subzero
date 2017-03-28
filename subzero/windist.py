@@ -1,7 +1,6 @@
 import distutils.command.bdist_msi
 import distutils.errors
 import distutils.util
-import ntpath
 import os
 import shutil
 import json
@@ -57,15 +56,15 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                 build_found = True
                 break
             else:
-                self.bdist_dir = ntpath.dirname(self.bdist_dir)
+                self.bdist_dir = os.path.dirname(self.bdist_dir)
 
         if not build_found:
             raise EnvironmentError('Unable to identify build directory!')
 
         self.bdist_dir = os.path.join(self.bdist_dir, build_dir())
         self.build_temp = os.path.join(
-            ntpath.dirname(self.bdist_dir),
-            'temp' + ntpath.basename(self.bdist_dir)[3:])
+            os.path.dirname(self.bdist_dir),
+            'temp' + os.path.basename(self.bdist_dir)[3:])
         self.height = 270
 
     def initialize_options(self):
@@ -82,7 +81,7 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         # TODO: Parse other types of license files
         for file in ['LICENSE', 'LICENSE.txt']:
             if os.path.isfile(file):
-                self.license_text = self._license_text(open(file))
+                self.license_text = open(file).read()
                 break
 
     def _write_json(self, fh):
