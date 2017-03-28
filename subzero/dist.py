@@ -19,56 +19,13 @@ from packaging import version
 from pkg_resources import EntryPoint, Requirement
 from pyspin.spin import make_spin, Spin1
 
-if sys.version_info >= (3, 4):
-    from contextlib import suppress
-else:
-    from contextlib2 import suppress
-
-__all__ = ["build_exe", "setup"]
+from .utils import suppress, makespec_args, decode, is_binary, rename_script, build_dir, entry_keys, move_tree
 
 
 class build_exe(distutils.core.Command):
     description = "build executables from Python scripts"
     user_options = []
     boolean_options = []
-    _excluded_args = [
-        'scripts',
-        'specpath',
-    ]
-
-    @classmethod
-    def makespec_args(cls):
-        names = ['datas']  # signature does not detect datas for some reason
-        for name, parameter in inspect.signature(
-                makespec_main).parameters.items():
-            if name not in (cls._excluded_args + ['args', 'kwargs']):
-                names.append(name)
-
-        return names
-
-    @staticmethod
-    def decode(bytes_or_string):
-        if isinstance(bytes_or_string, bytes):
-            return bytes_or_string.decode()
-        else:
-            return bytes_or_string
-
-    @staticmethod
-    def is_binary(file):
-        return file.endswith(('.so', '.pyd', '.dll', ))
-
-    @staticmethod
-    def rename_script(executable):
-        # Per issue #32.
-        new_script_name = '{}.{}.py'.format(executable.script,
-                                            str(uuid.uuid4()))
-        os.rename(executable.script, new_script_name)
-        executable.script = new_script_name
-
-    @staticmethod
-    def build_dir():
-        return "exe.{}-{}".format(distutils.util.get_platform(),
-                                  sys.version[0:3])
 
     def initialize_options(self):
         distutils.command.build.build.initialize_options(self)
@@ -77,14 +34,14 @@ class build_exe(distutils.core.Command):
         self.executables = []
         self._script_names = []
 
-        for name in self.makespec_args():
+        for name in makespec_args():
             if not getattr(self, name, None):
                 setattr(self, name, None)
 
     def finalize_options(self):
         distutils.command.build.build.finalize_options(self)
         if self.build_exe is None:
-            self.build_exe = os.path.join(self.build_base, self.build_dir())
+            self.build_exe = os.path.join(self.build_base, build_dir())
 
         try:
             self.distribution.install_requires = list(
@@ -108,17 +65,24 @@ class build_exe(distutils.core.Command):
         except TypeError:
             self.distribution.scripts = []
 
+        # TODO: deduplicate this code into utils
         self.distribution.entry_points.setdefault('console_scripts', [])
+        self.distribution.entry_points.setdefault('gui_scripts', [])
 
         if not hasattr(self.distribution, 'setup_requires'):
             self.distribution.setup_requires = []
 
     def run(self):
-        try:
-            entry_points = EntryPoint.parse_map(
-                self.distribution.entry_points)['console_scripts']
-        except KeyError:
-            entry_points = []
+        entry_points = {}
+        gui_scripts = []
+
+        entry_points_map = EntryPoint.parse_map(self.distribution.entry_points)
+        for entry_key in entry_keys:
+            with suppress(KeyError):
+                entry_points.update(entry_points_map[entry_key])
+                if entry_key == 'gui_scripts':
+                    gui_scripts.extend(entry_points_map[entry_key].keys())
+
         try:
             options = {}
             for key, value in dict(
@@ -135,7 +99,7 @@ class build_exe(distutils.core.Command):
         for entry_point in entry_points.values():
             scripts.append(self._generate_script(entry_point, self.build_temp))
 
-        lib_dirs = ['lib', 'lib{}'.format(self.build_dir()[3:])]
+        lib_dirs = ['lib', 'lib{}'.format(build_dir()[3:])]
         for lib_dir in lib_dirs:
             shutil.rmtree(
                 os.path.join(self.build_base, lib_dir), ignore_errors=True)
@@ -166,7 +130,7 @@ class build_exe(distutils.core.Command):
             options['datas'][i][0] = os.path.abspath(options['datas'][i][0])
 
         if not self.optimize_imports:
-            self.discover_dependencies(options)
+            self._discover_dependencies(options)
 
         executables = []
         for script, executable in zip(scripts, self.executables):
@@ -175,22 +139,24 @@ class build_exe(distutils.core.Command):
             executable._options = dict(options, **executable.options)
             executable._options['name'] = '.'.join(
                 ntpath.basename(script).split('.')[:-1])
+            if executable._options['name'] in gui_scripts:
+                executable._options['console'] = False
 
             executables.append(executable)
 
         for executable in executables:
-            self.rename_script(executable)
+            rename_script(executable)
 
         names = [executable.options['name'] for executable in executables]
         for executable in executables:
             self._freeze(executable, self.build_temp, self.build_exe)
 
         for name in names[1:]:
-            self.move_tree(
+            move_tree(
                 os.path.join(self.build_exe, name),
                 os.path.join(self.build_exe, names[0]))
 
-        self.move_tree(os.path.join(self.build_exe, names[0]), self.build_exe)
+        move_tree(os.path.join(self.build_exe, names[0]), self.build_exe)
 
         shutil.rmtree(self.build_temp, ignore_errors=True)
 
@@ -227,7 +193,7 @@ class build_exe(distutils.core.Command):
             packages.append(requirement.key)
 
         entries = json.loads(
-            self.decode(subprocess.check_output(['pipdeptree', '--json'])))
+            decode(subprocess.check_output(['pipdeptree', '--json'])))
         updated = True
         while updated:
             updated = False
@@ -247,7 +213,7 @@ class build_exe(distutils.core.Command):
             in_header = True
             root = None
             with suppress(CalledProcessError):
-                for line in self.decode(
+                for line in decode(
                         subprocess.check_output(['pip', 'show', '-f', package
                                                  ])).splitlines():
                     line = line.strip()
@@ -262,12 +228,12 @@ class build_exe(distutils.core.Command):
                             os.path.join(root, line.strip()))
                         if line.endswith('.py') or line.endswith('.pyc'):
                             module_files.add(full_path)
-                        if self.is_binary(line):
+                        if is_binary(line):
                             binary_files.add(full_path)
 
         return module_files, binary_files
 
-    def discover_dependencies(self, options):
+    def _discover_dependencies(self, options):
         module_files = self._compile_modules()
         required_module_files, required_binary_files = self._compile_requirements(
         )
@@ -284,37 +250,9 @@ class build_exe(distutils.core.Command):
 
         options['pathex'] = list(set(options['pathex']))
 
-    @staticmethod
-    def move_tree(sourceRoot, destRoot):
-        if not os.path.exists(destRoot):
-            return False
-        ok = True
-        for path, dirs, files in os.walk(sourceRoot):
-            relPath = os.path.relpath(path, sourceRoot)
-            destPath = os.path.join(destRoot, relPath)
-            if not os.path.exists(destPath):
-                os.makedirs(destPath)
-            for file in files:
-                destFile = os.path.join(destPath, file)
-                if os.path.isfile(destFile):
-                    print("Skipping existing file: {}".format(
-                        os.path.join(relPath, file)))
-                    ok = False
-                    continue
-                srcFile = os.path.join(path, file)
-                # print "rename", srcFile, destFile
-                os.rename(srcFile, destFile)
-        for path, dirs, files in os.walk(sourceRoot, False):
-            if len(files) == 0 and len(dirs) == 0:
-                os.rmdir(path)
-        return ok
-
     def _generate_script(self, entry_point, workpath):
         """
         Generates a script given an entry point.
-        :param entry_point:
-        :param workpath:
-        :return: The script location
         """
 
         # note that build_scripts appears to work sporadically
@@ -365,7 +303,7 @@ class Executable(object):
         self._options = {}
 
         for name in kwargs:
-            if name in build_exe.makespec_args():
+            if name in makespec_args():
                 self._options[name] = kwargs[name]
 
     @property

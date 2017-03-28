@@ -8,7 +8,8 @@ try:
 except ImportError:
     from distutils.core import setup as distutils_setup
 
-from subzero.dist import build_exe, Executable
+from .dist import build_exe, Executable, entry_keys
+from .utils import merge_defaults
 from pyspin.spin import make_spin, Spin1
 
 version = "5.0"
@@ -22,8 +23,11 @@ def _AddCommandClass(commandClasses, name, cls):
 
 @make_spin(Spin1, 'Installing project requirements...')
 def install_requirements(requirements):
+    if not requirements:
+        return
+
     command = [sys.executable, '-m', 'pip', 'install', '--user'] + requirements
-    try: 
+    try:
         subprocess.check_output(command, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         print(e.output)
@@ -31,28 +35,43 @@ def install_requirements(requirements):
 
 
 def setup(**attrs):
-    commandClasses = attrs.setdefault("cmdclass", {})
+    defaults = {
+        'cmdclass': {},
+        'install_requires': [],
+        'scripts': [],
+        'entry_points': {entry_key: []
+                         for entry_key in entry_keys},
+        'options': {
+            'build_exe': {
+                'executables': [],
+            },
+        },
+    }
+
+    attrs = merge_defaults(attrs, defaults)
+
     if sys.platform == "win32":
-        from subzero.windist import bdist_msi
-        _AddCommandClass(commandClasses, "bdist_msi", bdist_msi)
-    _AddCommandClass(commandClasses, "build_exe", build_exe)
-    if 'install_requires' in attrs and attrs['install_requires']:
-        install_requirements(attrs['install_requires'])
+        from .windist import bdist_msi
+        _AddCommandClass(attrs['cmdclass'], "bdist_msi", bdist_msi)
+    _AddCommandClass(attrs['cmdclass'], "build_exe", build_exe)
 
-    attrs.setdefault('scripts', [])
-    attrs.setdefault('entry_points', {}).setdefault('console_scripts', [])
-    attrs.setdefault('options', {}).setdefault('build_exe', {}).setdefault(
-        'executables', [])
+    install_requirements(attrs['install_requires'])
 
-    for script in attrs['scripts'] + attrs['entry_points']['console_scripts']:
-        if type(script) is Executable:
+    for script in attrs['scripts'] + [
+            attrs['entry_points'][entry_key] for entry_key in entry_keys
+    ]:
+        if isinstance(script, Executable):
+
             attrs['options']['build_exe']['executables'].append(script)
         else:
             attrs['options']['build_exe']['executables'].append(None)
 
     attrs['scripts'] = [str(script) for script in attrs['scripts']]
-    attrs['entry_points']['console_scripts'] = \
-        [str(entry_point) for entry_point in attrs['entry_points']['console_scripts']]
+    for entry_key in entry_keys:
+        attrs['entry_points'][entry_key] = [
+            str(entry_point)
+            for entry_point in attrs['entry_points'][entry_key]
+        ]
 
     distutils_setup(**attrs)
 
