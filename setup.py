@@ -24,7 +24,7 @@ setup(
     classifiers=[],
     install_requires=[
         'PyInstaller',
-        'PyRTF3',
+        'PyRTF3==0.46',
         'packaging',
         'pipdeptree',
         'pyspin',
