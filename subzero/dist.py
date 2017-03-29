@@ -15,6 +15,7 @@ from subprocess import CalledProcessError
 import PyInstaller.__main__
 from PyInstaller.building.makespec import main as makespec_main
 from PyInstaller.utils.hooks import collect_submodules, get_module_file_attribute
+from PyInstaller import log
 from packaging import version
 from pkg_resources import EntryPoint, Requirement
 from pyspin.spin import make_spin, Spin1
@@ -282,6 +283,7 @@ class build_exe(distutils.core.Command):
 
     @staticmethod
     def _freeze(executable, workpath, distpath):
+        log.logger.setLevel('DEBUG')
 
         with suppress(OSError):
             os.remove(
