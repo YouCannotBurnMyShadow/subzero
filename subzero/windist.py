@@ -26,7 +26,6 @@ class bdist_msi(d_bdist_msi):
     def finalize_options(self):
         distutils.command.bdist_msi.bdist_msi.finalize_options(self)
         name = self.distribution.get_name()
-        fullname = self.distribution.get_fullname()
         author = self.distribution.get_author()
         if self.initial_target_dir is None:
             if distutils.util.get_platform() == "win-amd64":
@@ -35,19 +34,16 @@ class bdist_msi(d_bdist_msi):
                 programs_folder = "programs_folder"
             self.initial_target_dir = r"[{}]\{}\{}".format(
                 programs_folder, author, name)
-        if self.add_to_path is None:
-            self.add_to_path = False
-        if self.target_name is None:
-            self.target_name = fullname
+
         if not self.target_name.lower().endswith(".msi"):
             platform = distutils.util.get_platform().replace("win-", "")
             self.target_name = "%s-%s.msi" % (self.target_name, platform)
         if not os.path.isabs(self.target_name):
             self.target_name = os.path.join(self.dist_dir, self.target_name)
-        if self.directories is None:
-            self.directories = []
-        if self.data is None:
-            self.data = {}
+        self.directories = self.directories or []
+        self.data = self.data or {}
+        self.add_to_path = self.add_to_path or False
+        self.target_name = self.target_name or None
 
         # attempt to find the build directory
         build_found = False
