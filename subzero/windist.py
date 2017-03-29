@@ -76,7 +76,7 @@ class bdist_msi(d_bdist_msi):
         self.target_name = None
         self.directories = None
         self.data = None
-        self.shortcuts = None
+        self.shortcuts = []
 
         # TODO: Parse other types of license files
         for file in ['LICENSE', 'LICENSE.txt']:
@@ -106,13 +106,20 @@ class bdist_msi(d_bdist_msi):
         return files, directories
 
     def _generate_shortcuts(self):
-        return [{
-            "name": "go-msi",
-            "description": "Easy msi pakage for Go",
-            "target": "[INSTALLDIR]\\go-msi.exe",
-            "wdir": "INSTALLDIR",
-            "arguments": ""
-        }]
+        shortcuts = []
+        for shortcut in self.shortcuts:
+            name, target = [s.strip() for s in shortcut.split('=')]
+
+            shortcuts.append({
+                "name": name,
+                "description": self.description,
+                "target": "[INSTALLDIR]\\{}.exe".format(
+                    target),  # TODO: cross check against executables
+                "wdir": "INSTALLDIR",
+                "arguments": ""
+            })
+
+        return shortcuts
 
     def _write_json(self, fh):
         license_name = 'LICENSE'
