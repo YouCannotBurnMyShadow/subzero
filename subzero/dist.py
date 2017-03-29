@@ -246,7 +246,8 @@ class build_exe(distutils.core.Command):
             try:
                 options['hiddenimports'].append(module_files[required_file])
             except KeyError:
-                print('Unable to collect module for {}'.format(required_file))
+                log.logger.debug(
+                    'Unable to collect module for {}'.format(required_file))
 
         for required_file in required_binary_files:
             # FIXME: Add to binaries rather than simply appending to pathex.
