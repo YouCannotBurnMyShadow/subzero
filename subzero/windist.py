@@ -3,10 +3,9 @@ import distutils.util
 import os
 import shutil
 import json
-
 import go_msi
 
-from .utils import build_dir, enter_directory
+from .utils import build_dir, enter_directory, generate_guid
 from pyspin.spin import make_spin, Spin1
 from distutils.command.bdist_msi import bdist_msi as d_bdist_msi
 
@@ -90,10 +89,30 @@ class bdist_msi(d_bdist_msi):
         directories = []
         files = []
 
-        for dirpath, dirnames, filenames in os.walk(self.bdist_dir):
-            pass
+        for dirpath, dirnames, filenames in os.walk(self.build_temp):
+
+            for dirname in dirnames:
+                directories.append(
+                    os.path.relpath(
+                        os.path.join(self.build_temp, dirpath, dirname),
+                        self.build_temp))
+
+            for filename in filenames:
+                files.append(
+                    os.path.relpath(
+                        os.path.join(self.build_temp, dirpath, filename),
+                        self.build_temp))
 
         return files, directories
+
+    def _generate_shortcuts(self):
+        return [{
+            "name": "go-msi",
+            "description": "Easy msi pakage for Go",
+            "target": "[INSTALLDIR]\\go-msi.exe",
+            "wdir": "INSTALLDIR",
+            "arguments": ""
+        }]
 
     def _write_json(self, fh):
         license_name = 'LICENSE'
@@ -109,32 +128,13 @@ class bdist_msi(d_bdist_msi):
             "license": license_name,
             "upgrade-code": self.upgrade_code,
             "files": {
-                "guid": "378896D8-6749-4821-870A-44CBBB791D0C",
+                "guid": generate_guid(),
                 "items": files
             },
             "directories": directories,
-            "env": {
-                "guid":
-                "0CB88C7F-85A7-4986-B6CE-1CAD5C17EA0E",
-                "vars": [{
-                    "name": "PATH",
-                    "value": "[INSTALLDIR]",
-                    "permanent": "no",
-                    "system": "no",
-                    "action": "set",
-                    "part": "last"
-                }]
-            },
             "shortcuts": {
-                "guid":
-                "6DAFD205-3D2D-43D7-BF78-33BFE8746D2A",
-                "items": [{
-                    "name": "go-msi",
-                    "description": "Easy msi pakage for Go",
-                    "target": "[INSTALLDIR]\\go-msi.exe",
-                    "wdir": "INSTALLDIR",
-                    "arguments": ""
-                }]
+                "guid": generate_guid(),
+                "items": self._generate_shortcuts(),
             },
         }
 
@@ -144,7 +144,7 @@ class bdist_msi(d_bdist_msi):
     @make_spin(Spin1, 'Building installer...')
     def _build_msi(self):
         with enter_directory(self.build_temp):
-            go_msi.call_go_msi([])
+            go_msi.make()
 
     def run(self):
         # self.skip_build = True
