@@ -77,7 +77,7 @@ install:
   - "%CMD_IN_ENV% python -m pip install -U pip setuptools wheel"
 
   # Install the test dependencies.
-  - "%CMD_IN_ENV% pip install -U --verbose --disable-pip-version-check --timeout 5 --retries 2 -r tests/requirements.txt"
+  - "%CMD_IN_ENV% pip install -U --disable-pip-version-check --timeout 5 --retries 2 -r tests/requirements.txt"
 
   # Install PyInstaller into virtualenv.
   - "%CMD_IN_ENV% pip install -e ."
