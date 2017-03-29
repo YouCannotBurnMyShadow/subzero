@@ -53,7 +53,7 @@ matrix:
 
 cache:
   # Cache downloaded pip packages.
-  - "%LOCALAPPDATA%\pip"
+  - "%LOCALAPPDATA%\\pip"
 
 init:
   - "ECHO %PYTHON% %PYTHON_VERSION% %PYTHON_ARCH%"
