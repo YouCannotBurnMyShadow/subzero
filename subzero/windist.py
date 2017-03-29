@@ -170,4 +170,4 @@ class bdist_msi(d_bdist_msi):
         with open(os.path.join(self.build_temp, 'wix.json'), 'w+') as fh:
             self._write_json(fh)
 
-        self.build_msi()
+        self._build_msi()
