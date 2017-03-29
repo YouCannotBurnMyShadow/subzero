@@ -83,6 +83,8 @@ class bdist_msi(d_bdist_msi):
             if os.path.isfile(file):
                 self.license_text = open(file).read()
                 break
+        else:
+            self.license_text = ''
 
     @make_spin(Spin1, 'Harvesting files...')
     def _harvest_files(self):
