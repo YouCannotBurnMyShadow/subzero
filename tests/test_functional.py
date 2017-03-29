@@ -7,6 +7,15 @@ import glob
 
 from subzero.utils import enter_directory, build_dir
 
+this_directory = os.path.dirname(__file__)
+functional_directory = os.path.join(this_directory, 'functional')
+
+
+def pytest_generate_tests(metafunc):
+    if "project" in metafunc.funcargnames:
+        for project in os.listdir(functional_directory):
+            metafunc.addcall(funcargs=dict(project=project))
+
 
 def _run_command(setup_command, arguments=[]):
     sys.argv[1:] = [setup_command] + list(arguments)
@@ -28,16 +37,12 @@ def _extract_msi():
     return tmpdir
 
 
-# TODO: generate different tests
-def test_all():
-    this_directory = os.path.dirname(__file__)
-    functional_directory = os.path.join(this_directory, 'functional')
-    for project in os.listdir(functional_directory):
-        with enter_directory(os.path.join(functional_directory, project)):
-            assert 'setup.py' in os.listdir()
-            _run_command('bdist_msi')
-            tmpdir = _extract_msi()
-            for executable in glob.iglob(
-                    os.path.join(tmpdir, '**/*.exe'), recursive=True):
-                assert subprocess.check_output(
-                    [executable]) == b'Script executed successfully!\r\n'
+def test_project(project):
+    with enter_directory(os.path.join(functional_directory, project)):
+        assert 'setup.py' in os.listdir()
+        _run_command('bdist_msi')
+        tmpdir = _extract_msi()
+        for executable in glob.iglob(
+                os.path.join(tmpdir, '**/*.exe'), recursive=True):
+            assert subprocess.check_output(
+                [executable]) == b'Script executed successfully!\r\n'
