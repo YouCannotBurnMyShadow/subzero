@@ -3,7 +3,7 @@ def main():
 
 
 def gui():
-    input("execution okay")
+    print("execution okay")
 
 
 if __name__ == '__main__':
