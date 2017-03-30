@@ -11,12 +11,6 @@ this_directory = os.path.dirname(__file__)
 functional_directory = os.path.join(this_directory, 'functional')
 
 
-def pytest_generate_tests(metafunc):
-    if "project" in metafunc.funcargnames:
-        for project in os.listdir(functional_directory):
-            metafunc.addcall(funcargs=dict(project=project))
-
-
 def _run_command(setup_command, arguments=[]):
     sys.argv[1:] = [setup_command] + list(arguments)
     exec('\n'.join(open('setup.py')))
@@ -37,12 +31,23 @@ def _extract_msi():
     return tmpdir
 
 
-def test_project(project):
-    with enter_directory(os.path.join(functional_directory, project)):
+@pytest.fixture(params=os.listdir(functional_directory))
+def get_executables(request):
+    with enter_directory(os.path.join(functional_directory, request.param)):
         assert 'setup.py' in os.listdir()
         _run_command('bdist_msi')
         tmpdir = _extract_msi()
+        executables = []
         for executable in glob.iglob(
                 os.path.join(tmpdir, '**/*.exe'), recursive=True):
+            executables.append(os.path.abspath(executable))
+
+        yield executables
+
+
+def test_executables(get_executables):
+    for executable in get_executables:
+        with enter_directory(os.path.dirname(executable)):
             assert subprocess.check_output(
-                [executable]) == b'Script executed successfully!\r\n'
+                [os.path.basename(executable)],
+                stderr=sys.stderr).strip() == b'execution okay'

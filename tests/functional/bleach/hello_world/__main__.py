@@ -1,5 +1,5 @@
 def main():
-    print("Script executed successfully!")
+    print("execution okay")
 
 
 def gui():
