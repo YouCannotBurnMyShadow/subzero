@@ -27,23 +27,26 @@ class bdist_msi(d_bdist_msi):
         distutils.command.bdist_msi.bdist_msi.finalize_options(self)
         name = self.distribution.get_name()
         author = self.distribution.get_author()
-        if self.initial_target_dir is None:
-            if distutils.util.get_platform() == "win-amd64":
-                programs_folder = "ProgramFiles64Folder"
-            else:
-                programs_folder = "programs_folder"
-            self.initial_target_dir = r"[{}]\{}\{}".format(
-                programs_folder, author, name)
 
-        if not self.target_name.lower().endswith(".msi"):
-            platform = distutils.util.get_platform().replace("win-", "")
-            self.target_name = "%s-%s.msi" % (self.target_name, platform)
-        if not os.path.isabs(self.target_name):
-            self.target_name = os.path.join(self.dist_dir, self.target_name)
         self.directories = self.directories or []
         self.data = self.data or {}
         self.add_to_path = self.add_to_path or False
-        self.target_name = self.target_name or None
+        self.target_name = self.target_name or ''
+        self.upgrade_code = self.upgrade_code or generate_guid()
+
+        if self.initial_target_dir is None:
+            if distutils.util.get_platform() == 'win-amd64':
+                programs_folder = 'ProgramFiles64Folder'
+            else:
+                programs_folder = 'programs_folder'
+            self.initial_target_dir = r'[{}]\{}\{}'.format(
+                programs_folder, author, name)
+
+        if not self.target_name.lower().endswith('.msi'):
+            platform = distutils.util.get_platform().replace('win-', '')
+            self.target_name = '%s-%s.msi' % (self.target_name, platform)
+        if not os.path.isabs(self.target_name):
+            self.target_name = os.path.join(self.dist_dir, self.target_name)
 
         # attempt to find the build directory
         build_found = False
@@ -61,7 +64,6 @@ class bdist_msi(d_bdist_msi):
         self.build_temp = os.path.join(
             os.path.dirname(self.bdist_dir),
             'temp' + os.path.basename(self.bdist_dir)[3:])
-        self.height = 270
 
     def initialize_options(self):
         distutils.command.bdist_msi.bdist_msi.initialize_options(self)
@@ -87,19 +89,12 @@ class bdist_msi(d_bdist_msi):
         directories = []
         files = []
 
-        for dirpath, dirnames, filenames in os.walk(self.build_temp):
-
-            for dirname in dirnames:
-                directories.append(
-                    os.path.relpath(
-                        os.path.join(self.build_temp, dirpath, dirname),
-                        self.build_temp))
-
-            for filename in filenames:
-                files.append(
-                    os.path.relpath(
-                        os.path.join(self.build_temp, dirpath, filename),
-                        self.build_temp))
+        with enter_directory(self.bdist_dir):
+            for name in os.listdir():
+                if os.path.isdir(name):
+                    directories.append(name)
+                else:
+                    files.append(name)
 
         return files, directories
 
@@ -109,28 +104,30 @@ class bdist_msi(d_bdist_msi):
             name, target = [s.strip() for s in shortcut.split('=')]
 
             shortcuts.append({
-                "name": name,
-                "description": self.description,
-                "target": "[INSTALLDIR]\\{}.exe".format(
+                'name': name,
+                'description': self.description,
+                'target': '[INSTALLDIR]\\{}.exe'.format(
                     target),  # TODO: cross check against executables
-                "wdir": "INSTALLDIR",
-                "arguments": ""
+                'wdir': 'INSTALLDIR',
+                'arguments': ''
             })
 
         return shortcuts
 
     def _write_json(self, fh):
-        license_name = 'LICENSE'
-        license_path = os.path.join(self.build_temp, license_name)
+        files, directories = self._harvest_files(
+        )  # Harvesting must be done before any files are written
+
+        license_name = generate_guid()
+        license_path = os.path.join(self.bdist_dir, license_name)
         with open(license_path, 'w+') as lfh:
             lfh.write(self.license_text)
-
-        files, directories = self._harvest_files()
 
         config = {
             "product": self.distribution.get_name(),
             "company": self.distribution.get_author(),
             "license": license_name,
+            "version": self.distribution.metadata.get_version(),
             "upgrade-code": self.upgrade_code,
             "files": {
                 "guid": generate_guid(),
@@ -148,8 +145,13 @@ class bdist_msi(d_bdist_msi):
 
     @make_spin(Spin1, 'Building installer...')
     def _build_msi(self):
-        with enter_directory(self.build_temp):
-            go_msi.make()
+        msi = '{}.msi'.format(build_dir())
+        with enter_directory(self.bdist_dir):
+            go_msi.make(msi=msi)
+
+        shutil.move(
+            os.path.join(self.bdist_dir, msi), os.path.join(
+                self.dist_dir, msi))
 
     def run(self):
         # self.skip_build = True
@@ -165,14 +167,12 @@ class bdist_msi(d_bdist_msi):
         except OSError:
             pass
 
-        os.makedirs(self.build_temp, exist_ok=True)
-
         # Resolve all directory names here
         # build_temp = os.path.abspath(self.build_temp)
         # bdist_dir = os.path.abspath(self.bdist_dir)
         # target_name = os.path.abspath(self.target_name)
 
-        with open(os.path.join(self.build_temp, 'wix.json'), 'w+') as fh:
+        with open(os.path.join(self.bdist_dir, 'wix.json'), 'w+') as fh:
             self._write_json(fh)
 
         self._build_msi()
