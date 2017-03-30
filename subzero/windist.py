@@ -4,6 +4,7 @@ import os
 import shutil
 import json
 import go_msi
+import re
 
 from .utils import build_dir, enter_directory, generate_guid
 from pyspin.spin import make_spin, Spin1
@@ -65,6 +66,10 @@ class bdist_msi(d_bdist_msi):
             os.path.dirname(self.bdist_dir),
             'temp' + os.path.basename(self.bdist_dir)[3:])
 
+        self._license = '{}.rtf'.format(
+            generate_guid())  #  The name of the generated RTF license file
+        self._license_path = os.path.join(self.bdist_dir, self._license)
+
     def initialize_options(self):
         distutils.command.bdist_msi.bdist_msi.initialize_options(self)
         self.upgrade_code = None
@@ -99,12 +104,14 @@ class bdist_msi(d_bdist_msi):
         return files, directories
 
     def _generate_shortcuts(self):
+        invalid = re.compile(r'[\\?|><:/*".]')
         shortcuts = []
+
         for shortcut in self.shortcuts:
             name, target = [s.strip() for s in shortcut.split('=')]
 
             shortcuts.append({
-                'name': name,
+                'name': invalid.sub('', name),
                 'description': self.description,
                 'target': '[INSTALLDIR]\\{}.exe'.format(
                     target),  # TODO: cross check against executables
@@ -114,19 +121,25 @@ class bdist_msi(d_bdist_msi):
 
         return shortcuts
 
+    def _write_license(self, fh):
+        with enter_directory(self.build_temp):
+            txt = generate_guid()
+            with open(txt, 'w+') as lfh:
+                lfh.write(txt)
+
+            go_msi.to_rtf(src=txt, out=self._license, reencode=True)
+
+            with open(self._license, 'r') as lfh:
+                shutil.copyfileobj(lfh, fh)
+
     def _write_json(self, fh):
         files, directories = self._harvest_files(
         )  # Harvesting must be done before any files are written
 
-        license_name = generate_guid()
-        license_path = os.path.join(self.bdist_dir, license_name)
-        with open(license_path, 'w+') as lfh:
-            lfh.write(self.license_text)
-
         config = {
             "product": self.distribution.get_name(),
             "company": self.distribution.get_author(),
-            "license": license_name,
+            "license": os.path.abspath(self._license_path),
             "version": self.distribution.metadata.get_version(),
             "upgrade-code": self.upgrade_code,
             "files": {
@@ -167,10 +180,15 @@ class bdist_msi(d_bdist_msi):
         except OSError:
             pass
 
+        os.makedirs(self.build_temp, exist_ok=True)
+
         # Resolve all directory names here
         # build_temp = os.path.abspath(self.build_temp)
         # bdist_dir = os.path.abspath(self.bdist_dir)
         # target_name = os.path.abspath(self.target_name)
+
+        with open(self._license_path, 'w+') as fh:
+            self._write_license(fh)
 
         with open(os.path.join(self.bdist_dir, 'wix.json'), 'w+') as fh:
             self._write_json(fh)
