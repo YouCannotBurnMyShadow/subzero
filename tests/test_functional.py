@@ -3,9 +3,8 @@ import subprocess
 import sys
 import tempfile
 import pytest
-import glob
 
-from subzero.utils import enter_directory, build_dir
+from subzero.utils import enter_directory, build_dir, iglob
 
 this_directory = os.path.dirname(__file__)
 functional_directory = os.path.join(this_directory, 'functional')
@@ -18,7 +17,7 @@ def _run_command(setup_command, arguments=[]):
 
 def _extract_msi():
     installer = os.path.abspath([
-        filename for filename in glob.iglob('dist/*.msi')
+        filename for filename in iglob('dist/*.msi')
         if os.path.isfile(filename)
     ][0])
 
@@ -38,7 +37,7 @@ def get_executables(request):
         _run_command('bdist_msi')
         tmpdir = _extract_msi()
         executables = []
-        for executable in glob.iglob(
+        for executable in iglob(
                 os.path.join(tmpdir, '**/*.exe'), recursive=True):
             executables.append(os.path.abspath(executable))
 
