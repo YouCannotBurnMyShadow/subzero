@@ -112,13 +112,6 @@ def generate_guid():
     return str(uuid.uuid1()).upper()
 
 
-def generate_bool(b):
-    """
-    returns yes if True, otherwise no
-    """
-    return 'yes' if b else 'no'
-
-
 @contextmanager
 def enter_directory(path):
     current_directory = os.getcwd()
