@@ -24,11 +24,9 @@ setup(
     classifiers=[],
     install_requires=[
         'PyInstaller',
-        'PyRTF3==0.46',
         'packaging',
         'pipdeptree',
         'pyspin',
-        'lxml',
         'deepmerge',
         'pywix;sys_platform == "win32"',
         'glob2;python_version<"3.5"',
