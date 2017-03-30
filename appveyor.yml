@@ -87,10 +87,16 @@ install:
 
 build: none
 
+before_test:
+  - ps: cp C:\ProgramData\chocolatey\logs\chocolatey.log .
+
 test_script:
   # Run the tests appropriate for this entry in the test matrix. Skip tests
   # if we're just updating the cache.
   - "if not \"%APPVEYOR_SCHEDULED_BUILD%\" == \"True\" (%CMD_IN_ENV% %TEST1_CMD% )"
+
+artifacts:
+  - path: chocolatey.log
 
 on_success:
   # Remove old or huge cache files to hopefully not exceed the 1GB cache limit.
