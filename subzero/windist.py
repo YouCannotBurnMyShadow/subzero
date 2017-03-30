@@ -125,7 +125,7 @@ class bdist_msi(d_bdist_msi):
         with enter_directory(self.build_temp):
             txt = generate_guid()
             with open(txt, 'w+') as lfh:
-                lfh.write(txt)
+                lfh.write(self.license_text)
 
             go_msi.to_rtf(src=txt, out=self._license, reencode=True)
 
