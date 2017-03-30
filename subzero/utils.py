@@ -14,6 +14,19 @@ import deepmerge
 import pathlib
 from contextlib import contextmanager
 
+if sys.version_info >= (3, 5):
+    from glob import iglob
+else:
+    import glob
+    import glob2
+
+    def iglob(path, recursive=False):
+        if recursive:
+            return glob2.iglob(path)
+        else:
+            return glob.iglob(path)
+
+
 entry_keys = [
     'console_scripts',
     'gui_scripts',

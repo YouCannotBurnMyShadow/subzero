@@ -31,6 +31,7 @@ setup(
         'lxml',
         'deepmerge',
         'pywix;sys_platform == "win32"',
+        'glob2;python_version<"3.5"',
         'pathlib;python_version<"3.4"',
         'contextlib2;python_version<"3.4"',
     ],
