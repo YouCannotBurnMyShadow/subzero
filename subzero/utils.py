@@ -11,6 +11,21 @@ import uuid
 import os
 import distutils
 import deepmerge
+import pathlib
+from contextlib import contextmanager
+
+if sys.version_info >= (3, 5):
+    from glob import iglob
+else:
+    import glob
+    import glob2
+
+    def iglob(path, recursive=False):
+        if recursive:
+            return glob2.iglob(path)
+        else:
+            return glob.iglob(path)
+
 
 entry_keys = [
     'console_scripts',
@@ -88,3 +103,25 @@ def move_tree(source, destination):
     for path, dirs, files in os.walk(source, False):
         if len(files) == 0 and len(dirs) == 0:
             os.rmdir(path)
+
+
+def generate_guid():
+    """
+    generates a GUID
+    """
+    return str(uuid.uuid1()).upper()
+
+
+def generate_bool(b):
+    """
+    returns yes if True, otherwise no
+    """
+    return 'yes' if b else 'no'
+
+
+@contextmanager
+def enter_directory(path):
+    current_directory = os.getcwd()
+    os.chdir(path)
+    yield
+    os.chdir(current_directory)

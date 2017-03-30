@@ -1,3 +1,2 @@
 include versioneer.py
 include subzero/_version.py
-recursive-include subzero/resources *

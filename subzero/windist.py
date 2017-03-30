@@ -1,27 +1,19 @@
-import distutils.command.bdist_msi
 import distutils.errors
 import distutils.util
-import ntpath
 import os
-import re
 import shutil
-import string
-import uuid
-import textwrap
-from io import StringIO
+import json
+import go_msi
+import re
 
-import PyRTF
-import lxml.etree as le
-import pywix
-from pkg_resources import resource_filename, resource_string
-
-from .dist import build_exe
-from .utils import build_dir
+from .utils import build_dir, enter_directory, generate_guid
+from pyspin.spin import make_spin, Spin1
+from distutils.command.bdist_msi import bdist_msi as d_bdist_msi
 
 __all__ = ["bdist_msi"]
 
 
-class bdist_msi(distutils.command.bdist_msi.bdist_msi):
+class bdist_msi(d_bdist_msi):
     user_options = distutils.command.bdist_msi.bdist_msi.user_options + [
         ('add-to-path=', None, 'add target dir to PATH environment variable'),
         ('upgrade-code=', None, 'upgrade code to use'),
@@ -32,101 +24,30 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         ('product-code=', None, 'product code to use')
     ]
 
-    def _split_path(self, path):
-        folders = []
-        while 1:
-            path, folder = os.path.split(path)
-
-            if folder != "":
-                folders.append(folder)
-            else:
-                if path != "":
-                    folders.append(path)
-
-                break
-
-        folders.reverse()
-
-        return folders
-
-    def _license_text(self, license_file):
-        """
-        Generates rich text given a license file-like object
-        :param license_file: file-like object
-        :return:
-        """
-        wordpad_header = textwrap.dedent(r'''
-            {\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1033{\fonttbl{\f0\fnil\fcharset255 Times New Roman;}
-            {\*\generator Riched20 10.0.14393}\viewkind4\uc1
-            ''').strip().replace('\n', '\r\n')
-        center_space = '            '
-
-        r = PyRTF.Renderer()
-
-        doc = PyRTF.Document()
-        ss = doc.StyleSheet
-        sec = PyRTF.Section()
-        doc.Sections.append(sec)
-
-        is_blank = False
-        paragraph_text = ['']
-        for line in license_file:
-            if not line or line.isspace():
-                is_blank = True
-            if is_blank:
-                # first element of paragraph_text is left-aligned, subsequent elements are centered
-                is_centered = False
-                for sec_line in paragraph_text:
-                    if is_centered:
-                        para_props = PyRTF.ParagraphPS(
-                            alignment=PyRTF.ParagraphPS.CENTER)
-                        p = PyRTF.Paragraph(ss.ParagraphStyles.Normal,
-                                            para_props)
-                        p.append(sec_line)
-                        sec.append(p)
-                    elif sec_line:  # first element may be nothing, but not whitespace
-                        sec.append(sec_line)
-                    is_centered = True
-                is_blank = False
-                paragraph_text = ['']
-            if line.startswith(center_space):
-                paragraph_text.append(line.strip())
-                is_blank = True
-            else:
-                paragraph_text[0] += ' ' + line
-                paragraph_text[0] = paragraph_text[0].strip()
-
-        f = StringIO()
-        f.write(wordpad_header)
-        r.Write(doc, f)
-
-        return f.getvalue()
-
     def finalize_options(self):
         distutils.command.bdist_msi.bdist_msi.finalize_options(self)
         name = self.distribution.get_name()
-        fullname = self.distribution.get_fullname()
         author = self.distribution.get_author()
+
+        self.directories = self.directories or []
+        self.data = self.data or {}
+        self.add_to_path = self.add_to_path or False
+        self.target_name = self.target_name or ''
+        self.upgrade_code = self.upgrade_code or generate_guid()
+
         if self.initial_target_dir is None:
-            if distutils.util.get_platform() == "win-amd64":
-                programFilesFolder = "ProgramFiles64Folder"
+            if distutils.util.get_platform() == 'win-amd64':
+                programs_folder = 'ProgramFiles64Folder'
             else:
-                programFilesFolder = "ProgramFilesFolder"
-            self.initial_target_dir = r"[{}]\{}\{}".format(
-                programFilesFolder, author, name)
-        if self.add_to_path is None:
-            self.add_to_path = False
-        if self.target_name is None:
-            self.target_name = fullname
-        if not self.target_name.lower().endswith(".msi"):
-            platform = distutils.util.get_platform().replace("win-", "")
-            self.target_name = "%s-%s.msi" % (self.target_name, platform)
+                programs_folder = 'programs_folder'
+            self.initial_target_dir = r'[{}]\{}\{}'.format(
+                programs_folder, author, name)
+
+        if not self.target_name.lower().endswith('.msi'):
+            platform = distutils.util.get_platform().replace('win-', '')
+            self.target_name = '%s-%s.msi' % (self.target_name, platform)
         if not os.path.isabs(self.target_name):
             self.target_name = os.path.join(self.dist_dir, self.target_name)
-        if self.directories is None:
-            self.directories = []
-        if self.data is None:
-            self.data = {}
 
         # attempt to find the build directory
         build_found = False
@@ -135,16 +56,19 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
                 build_found = True
                 break
             else:
-                self.bdist_dir = ntpath.dirname(self.bdist_dir)
+                self.bdist_dir = os.path.dirname(self.bdist_dir)
 
         if not build_found:
             raise EnvironmentError('Unable to identify build directory!')
 
         self.bdist_dir = os.path.join(self.bdist_dir, build_dir())
         self.build_temp = os.path.join(
-            ntpath.dirname(self.bdist_dir),
-            'temp' + ntpath.basename(self.bdist_dir)[3:])
-        self.height = 270
+            os.path.dirname(self.bdist_dir),
+            'temp' + os.path.basename(self.bdist_dir)[3:])
+
+        self._license = '{}.rtf'.format(
+            generate_guid())  #  The name of the generated RTF license file
+        self._license_path = os.path.join(self.bdist_dir, self._license)
 
     def initialize_options(self):
         distutils.command.bdist_msi.bdist_msi.initialize_options(self)
@@ -155,179 +79,92 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
         self.target_name = None
         self.directories = None
         self.data = None
-        self.shortcuts = None
+        self.shortcuts = []
 
         # TODO: Parse other types of license files
         for file in ['LICENSE', 'LICENSE.txt']:
             if os.path.isfile(file):
-                self.license_text = self._license_text(open(file))
+                self.license_text = open(file).read()
                 break
-
-    @staticmethod
-    def _generate_id():
-        return 'cmp{}'.format(str(uuid.uuid1()).replace('-', '').upper())
-
-    @staticmethod
-    def _generate_bool(bool):
-        return 'yes' if bool else 'no'
-
-    def _generate_element(self,
-                          directory,
-                          subdirs={},
-                          component_group=None,
-                          root=False):
-        if root:
-            attr = {
-                'Id': directory,
-            }
         else:
-            attr = {
-                'Name': directory,
-                'Id': self._generate_id(),
-            }
-        element = le.Element('Directory', attr)
+            self.license_text = ''
 
-        for name, subdir in subdirs.items():
-            if type(subdir) is dict:
-                element.append(
-                    self._generate_element(name, subdir, component_group))
-            else:
-                component_id = self._generate_id()
-                component = le.Element('Component', {
-                    'Id': component_id,
-                    'Guid': '*',
-                })
-                component.append(
-                    le.Element('Shortcut', {
-                        'Id': self._generate_id(),
-                        'Name': name,
-                        'Target': '[INSTALLDIR]{}.exe'.format(subdir),
-                        'WorkingDirectory': 'INSTALLDIR',
-                    }))
-                component.append(
-                    le.Element(
-                        'RegistryValue', {
-                            'Root': 'HKCU',
-                            'Key': 'Software\$(var.Author)\$(var.ProductName)',
-                            'Name': '{{{}}}'.format(str(uuid.uuid1())),
-                            'Type': 'string',
-                            'Value': 'installed',
-                            'KeyPath': self._generate_bool(True),
-                        }))
-                element.append(component)
+    @make_spin(Spin1, 'Harvesting files...')
+    def _harvest_files(self):
+        directories = []
+        files = []
 
-                if component_group is not None:
-                    component_group.append(
-                        le.Element('ComponentRef', {
-                            'Id': component_id,
-                        }))
+        with enter_directory(self.bdist_dir):
+            for name in os.listdir():
+                if os.path.isdir(name):
+                    directories.append(name)
+                else:
+                    files.append(name)
 
-        return element
+        return files, directories
 
     def _generate_shortcuts(self):
-        # The first order of business to to generate a unified directory tree
-        tree = {}
+        invalid = re.compile(r'[\\?|><:/*".]')
+        shortcuts = []
+
         for shortcut in self.shortcuts:
-            shortcut = shortcut.split('=')
-            shortcut_target = shortcut[1].strip()
-            shortcut_dirs = self._split_path(
-                os.path.dirname(shortcut[0].strip()))
-            shortcut_name = os.path.basename(
-                shortcut[0].strip())  # not efficient, but more readable
+            name, target = [s.strip() for s in shortcut.split('=')]
 
-            subtree = tree
-            for shortcut_dir in shortcut_dirs:
-                subtree.setdefault(shortcut_dir, {})
-                subtree = subtree[shortcut_dir]
+            shortcuts.append({
+                'name': invalid.sub('', name),
+                'description': self.description,
+                'target': '[INSTALLDIR]\\{}.exe'.format(
+                    target),  # TODO: cross check against executables
+                'wdir': 'INSTALLDIR',
+                'arguments': ''
+            })
 
-            subtree[shortcut_name] = shortcut_target
+        return shortcuts
 
-        # <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"><Fragment><DirectoryRef Id="INSTALLDIR">
-        wix = le.Element('Wix', {
-            'xmlns': 'http://schemas.microsoft.com/wix/2006/wi',
-        })
+    def _write_license(self, fh):
+        with enter_directory(self.build_temp):
+            txt = generate_guid()
+            with open(txt, 'w+') as lfh:
+                lfh.write(self.license_text)
 
-        for i in range(2):
-            wix.append(le.Element('Fragment'))
+            go_msi.to_rtf(src=txt, out=self._license, reencode=True)
 
-        directory_ref = le.Element('DirectoryRef', {
-            'Id': 'TARGETDIR',
-        })
-        wix[0].append(directory_ref)
+            with open(self._license, 'r') as lfh:
+                shutil.copyfileobj(lfh, fh)
 
-        component_group = le.Element('ComponentGroup', {
-            'Id': 'ApplicationShortcuts',
-        })
-        wix[1].append(component_group)
+    def _write_json(self, fh):
+        files, directories = self._harvest_files(
+        )  # Harvesting must be done before any files are written
 
-        for name, subdirs in tree.items():
-            directory_ref.append(
-                self._generate_element(name, subdirs, component_group, True))
-
-        wix.insert(0, le.ProcessingInstruction('include', 'Globals.wxs'))
-
-        with open('Shortcuts.wxs', 'wb+') as f:
-            f.write(le.tostring(wix, pretty_print=True))
-
-    def _repair_harvest(self):
-        doc = le.parse('Directory.wxs')
-        elems = doc.xpath(
-            '//*[@Name="{}"]'.format(os.path.basename(self.bdist_dir)))
-        assert len(elems) == 1
-        elem = elems[0]
-        parent = elem.getparent()
-        parent.remove(elem)
-        for child in elem:
-            parent.append(child)
-
-        with open('Directory.wxs', 'wb+') as f:
-            f.write(le.tostring(doc, pretty_print=True))
-
-    def _generate_globals(self):
-        metadata = self.distribution.metadata
-        author = metadata.author or metadata.maintainer or "UNKNOWN"
-        version = metadata.get_version()
-        fullname = self.distribution.get_name()
-
-        variables = {
-            'ProductVersion':
-            version,
-            'ProductUpgradeCode':
-            self.upgrade_code,
-            'ProductName':
-            string.capwords(' '.join(fullname.replace('-', '_').split('_'))),
-            'Author':
-            author,
+        config = {
+            "product": self.distribution.get_name(),
+            "company": self.distribution.get_author(),
+            "license": os.path.abspath(self._license_path),
+            "version": self.distribution.metadata.get_version(),
+            "upgrade-code": self.upgrade_code,
+            "files": {
+                "guid": generate_guid(),
+                "items": files
+            },
+            "directories": directories,
+            "shortcuts": {
+                "guid": generate_guid(),
+                "items": self._generate_shortcuts(),
+            },
         }
 
-        include = le.Element('Include')
+        # write the file
+        json.dump(config, fh)
 
-        for name, variable in variables.items():
-            include.append(
-                le.ProcessingInstruction('define', '{} = "{}"'.format(
-                    name, variable)))
+    @make_spin(Spin1, 'Building installer...')
+    def _build_msi(self):
+        msi = '{}.msi'.format(build_dir())
+        with enter_directory(self.bdist_dir):
+            go_msi.make(msi=msi)
 
-        with open('Globals.wxs', 'wb+') as f:
-            f.write(le.tostring(include, pretty_print=True))
-
-    def _compile(self, names, out):
-        with open('License.rtf', 'w+') as license_file:
-            license_file.write(self.license_text)
-
-        candle_arguments = ['candle', '-arch', 'x64']
-        light_arguments = [
-            'light', '-ext', 'WixUIExtension', '-cultures:en-us',
-            '-dWixUILicenseRtf=License.rtf'
-        ]
-
-        for name in names:
-            candle_arguments.append('{}.wxs'.format(name))
-            light_arguments.append('{}.wixobj'.format(name))
-
-        light_arguments.extend(['-out', out])
-
-        for args in [candle_arguments, light_arguments]:
-            pywix.call_wix_command(args)
+        shutil.move(
+            os.path.join(self.bdist_dir, msi), os.path.join(
+                self.dist_dir, msi))
 
     def run(self):
         # self.skip_build = True
@@ -345,54 +182,15 @@ class bdist_msi(distutils.command.bdist_msi.bdist_msi):
 
         os.makedirs(self.build_temp, exist_ok=True)
 
-        current_directory = os.getcwd()
         # Resolve all directory names here
-        build_temp = os.path.abspath(self.build_temp)
-        bdist_dir = os.path.abspath(self.bdist_dir)
-        target_name = os.path.abspath(self.target_name)
-        files = [
-            'Product',
-        ]
+        # build_temp = os.path.abspath(self.build_temp)
+        # bdist_dir = os.path.abspath(self.bdist_dir)
+        # target_name = os.path.abspath(self.target_name)
 
-        for file in files:
-            shutil.copy(
-                resource_filename('subzero.resources', '{}.wxs'.format(file)),
-                self.build_temp)
+        with open(self._license_path, 'w+') as fh:
+            self._write_license(fh)
 
-        shutil.copy(
-            resource_filename('subzero.resources', 'HeatTransform.xslt'),
-            self.build_temp)
-        with open(os.path.join(self.build_temp, 'remove_burn.js'), 'w+') as f:
-            f.write(
-                resource_string('subzero.resources', 'remove_burn.js')
-                .decode().replace('upgrade_code', self.upgrade_code).replace(
-                    '\n', '\r\n'))
+        with open(os.path.join(self.bdist_dir, 'wix.json'), 'w+') as fh:
+            self._write_json(fh)
 
-        files.extend([
-            'Directory',
-            'Shortcuts',
-        ])
-
-        os.chdir(build_temp)
-        os.environ['bdist_dir'] = bdist_dir
-        print(
-            pywix.call_wix_command([
-                'heat', 'dir', bdist_dir, '-cg', 'ApplicationFiles', '-gg',
-                '-sfrag', '-sreg', '-dr', 'INSTALLDIR', '-var',
-                'env.bdist_dir', '-t', 'HeatTransform.xslt', '-out',
-                'Directory.wxs'
-            ]))
-
-        # we need to remove the root directory that heat puts in
-        self._repair_harvest()
-        self._generate_shortcuts()
-        self._generate_globals()
-        self._compile(files, target_name)
-
-        wixpdb_name = '{}.wixpdb'.format(os.path.splitext(target_name)[0])
-        try:
-            shutil.move(wixpdb_name, build_temp)
-        except OSError:
-            pass
-
-        os.chdir(current_directory)
+        self._build_msi()

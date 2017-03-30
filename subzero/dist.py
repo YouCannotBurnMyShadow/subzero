@@ -15,6 +15,7 @@ from subprocess import CalledProcessError
 import PyInstaller.__main__
 from PyInstaller.building.makespec import main as makespec_main
 from PyInstaller.utils.hooks import collect_submodules, get_module_file_attribute
+from PyInstaller import log
 from packaging import version
 from pkg_resources import EntryPoint, Requirement
 from pyspin.spin import make_spin, Spin1
@@ -94,12 +95,16 @@ class build_exe(distutils.core.Command):
 
         scripts = copy(self.distribution.scripts)
         self.distribution.scripts = []
-        for required_directory in [self.build_temp, self.build_exe]:
+
+        workpath = os.path.join(self.build_temp, 'workpath')
+        distpath = os.path.join(self.build_temp, 'distpath')
+
+        for required_directory in [distpath, self.build_exe, workpath]:
             shutil.rmtree(required_directory, ignore_errors=True)
             os.makedirs(required_directory, exist_ok=True)
 
         for entry_point in entry_points.values():
-            scripts.append(self._generate_script(entry_point, self.build_temp))
+            scripts.append(self._generate_script(entry_point, workpath))
 
         lib_dirs = ['lib', 'lib{}'.format(build_dir()[3:])]
         for lib_dir in lib_dirs:
@@ -112,7 +117,6 @@ class build_exe(distutils.core.Command):
             options.setdefault(default_option, [])
 
         # by convention, all paths appended to py_options must be absolute
-        options['hiddenimports'].extend(self.distribution.install_requires)
         for lib_dir in lib_dirs:
             if os.path.isdir(os.path.join(self.build_base, lib_dir)):
                 options['pathex'].append(
@@ -121,15 +125,12 @@ class build_exe(distutils.core.Command):
         if not options['pathex']:
             raise ValueError('Unable to find lib directory!')
 
-        if version.parse(sys.version[0:3]) >= version.parse('3.4'):
-            for package in self.distribution.packages:
-                options['hiddenimports'].extend(collect_submodules(package))
-
-        options['specpath'] = os.path.abspath(self.build_temp)
-        options['pathex'].append(os.path.abspath(self.build_temp))
+        options['specpath'] = os.path.abspath(workpath)
+        options['pathex'].append(os.path.abspath(workpath))
 
         for i, tp in enumerate(options.setdefault('datas', [])):
-            options['datas'][i][0] = os.path.abspath(options['datas'][i][0])
+            options['datas'][i] = (os.path.abspath(options['datas'][i][0]),
+                                   options['datas'][i][1])
 
         if not self.optimize_imports:
             self._discover_dependencies(options)
@@ -149,23 +150,19 @@ class build_exe(distutils.core.Command):
         for executable in executables:
             rename_script(executable)
 
-        names = [executable.options['name'] for executable in executables]
         for executable in executables:
-            self._freeze(executable, self.build_temp, self.build_exe)
+            self._freeze(executable, workpath, distpath)
 
+        ## TODO: Compare file hashes to make sure we haven't replaced files with a different version
+        names = [executable.options['name'] for executable in executables]
         for name in names[1:]:
             move_tree(
-                os.path.join(self.build_exe, name),
-                os.path.join(self.build_exe, names[0]))
+                os.path.join(distpath, name), os.path.join(distpath, names[0]))
 
-        move_tree(os.path.join(self.build_exe, names[0]), self.build_exe)
+        move_tree(os.path.join(distpath, names[0]), self.build_exe)
 
         shutil.rmtree(self.build_temp, ignore_errors=True)
-
-        # TODO: Compare file hashes to make sure we haven't replaced files with a different version
-        for name in names:
-            shutil.rmtree(
-                os.path.join(self.build_exe, name), ignore_errors=True)
+        shutil.rmtree(distpath, ignore_errors=True)
 
     @make_spin(Spin1, 'Compiling module file locations...')
     def _compile_modules(self):
@@ -236,6 +233,13 @@ class build_exe(distutils.core.Command):
         return module_files, binary_files
 
     def _discover_dependencies(self, options):
+        # Requirements cannot be assumed to be modules / packages
+        #options['hiddenimports'].extend(self.distribution.install_requires)
+
+        if version.parse(sys.version[0:3]) >= version.parse('3.4'):
+            for package in self.distribution.packages:
+                options['hiddenimports'].extend(collect_submodules(package))
+
         module_files = self._compile_modules()
         required_module_files, required_binary_files = self._compile_requirements(
         )
@@ -244,7 +248,8 @@ class build_exe(distutils.core.Command):
             try:
                 options['hiddenimports'].append(module_files[required_file])
             except KeyError:
-                print('Unable to collect module for {}'.format(required_file))
+                log.logger.debug(
+                    'Unable to collect module for {}'.format(required_file))
 
         for required_file in required_binary_files:
             # FIXME: Add to binaries rather than simply appending to pathex.
@@ -269,8 +274,6 @@ class build_exe(distutils.core.Command):
             fh.write("import {0}\n".format(entry_point.module_name))
             fh.write("{0}.{1}()\n".format(entry_point.module_name, '.'.join(
                 entry_point.attrs)))
-            for package in self.distribution.packages:
-                fh.write("import {0}\n".format(package))
 
             fh.seek(0)
             assert '==' not in fh.read()
@@ -282,6 +285,7 @@ class build_exe(distutils.core.Command):
 
     @staticmethod
     def _freeze(executable, workpath, distpath):
+        log.logger.setLevel('DEBUG')
 
         with suppress(OSError):
             os.remove(

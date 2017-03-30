@@ -10,7 +10,7 @@ environment:
     # /E:ON and /V:ON options are not enabled in the batch script intepreter
     # See: http://stackoverflow.com/a/13751649/163740
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\tests\\scripts\\appveyor\\run_with_env.cmd"
-    TEST1_CMD: "py.test --cov=./ --maxfail 5 --junitxml=junit-results.xml --durations=10 tests"
+    TEST1_CMD: "py.test -n3 --cov=./ --maxfail 5 --junitxml=junit-results.xml --durations=10 tests"
 
   matrix:
     - PYTHON: "C:\\Python35-x64"
@@ -53,13 +53,14 @@ matrix:
 
 cache:
   # Cache downloaded pip packages.
-  - "C:\\Users\\appveyor\\AppData\\Local\\pip"
+  - "%LOCALAPPDATA%\\pip"
 
 init:
   - "ECHO %PYTHON% %PYTHON_VERSION% %PYTHON_ARCH%"
   - "ECHO \"%APPVEYOR_SCHEDULED_BUILD%\""
 
 install:
+
   # Prepend newly installed Python to the PATH of this build (this cannot be
   # done from inside the powershell script as it would require to restart
   # the parent CMD process).
@@ -84,10 +85,16 @@ install:
 
 build: none
 
+before_test:
+  - ps: cp C:\ProgramData\chocolatey\logs\chocolatey.log .
+
 test_script:
   # Run the tests appropriate for this entry in the test matrix. Skip tests
   # if we're just updating the cache.
   - "if not \"%APPVEYOR_SCHEDULED_BUILD%\" == \"True\" (%CMD_IN_ENV% %TEST1_CMD% )"
+
+artifacts:
+  - path: chocolatey.log
 
 on_success:
   # Remove old or huge cache files to hopefully not exceed the 1GB cache limit.

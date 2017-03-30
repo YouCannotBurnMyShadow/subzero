@@ -137,3 +137,5 @@ ENV/
 .idea/
 .vscode/
 /xyz.py
+
+*.c
