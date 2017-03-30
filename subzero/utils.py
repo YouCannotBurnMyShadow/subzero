@@ -112,22 +112,11 @@ def generate_guid():
     return str(uuid.uuid1()).upper()
 
 
-def generate_component_id():
-    """
-    generates a component ID
-    """
-    return 'cmp{}'.format(generate_guid()).replace('-', '')
-
-
 def generate_bool(b):
     """
     returns yes if True, otherwise no
     """
     return 'yes' if b else 'no'
-
-
-def split_path(path):
-    return list(pathlib.Path(path).parts)
 
 
 @contextmanager
