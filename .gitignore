@@ -138,4 +138,4 @@ ENV/
 .vscode/
 /xyz.py
 
-.c
+*.c
