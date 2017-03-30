@@ -95,13 +95,16 @@ class build_exe(distutils.core.Command):
 
         scripts = copy(self.distribution.scripts)
         self.distribution.scripts = []
-        build_exe_temp = '{}.temp'.format(self.build_exe)
-        for required_directory in [self.build_temp, self.build_exe, build_exe_temp]:
+
+        workpath = os.path.join(self.build_temp, 'workpath')
+        distpath = os.path.join(self.build_temp, 'distpath')
+
+        for required_directory in [distpath, self.build_exe, workpath]:
             shutil.rmtree(required_directory, ignore_errors=True)
             os.makedirs(required_directory, exist_ok=True)
 
         for entry_point in entry_points.values():
-            scripts.append(self._generate_script(entry_point, self.build_temp))
+            scripts.append(self._generate_script(entry_point, workpath))
 
         lib_dirs = ['lib', 'lib{}'.format(build_dir()[3:])]
         for lib_dir in lib_dirs:
@@ -122,8 +125,8 @@ class build_exe(distutils.core.Command):
         if not options['pathex']:
             raise ValueError('Unable to find lib directory!')
 
-        options['specpath'] = os.path.abspath(self.build_temp)
-        options['pathex'].append(os.path.abspath(self.build_temp))
+        options['specpath'] = os.path.abspath(workpath)
+        options['pathex'].append(os.path.abspath(workpath))
 
         for i, tp in enumerate(options.setdefault('datas', [])):
             options['datas'][i] = (os.path.abspath(options['datas'][i][0]),
@@ -148,19 +151,18 @@ class build_exe(distutils.core.Command):
             rename_script(executable)
 
         for executable in executables:
-            self._freeze(executable, self.build_temp, build_exe_temp)
+            self._freeze(executable, workpath, distpath)
 
         ## TODO: Compare file hashes to make sure we haven't replaced files with a different version
         names = [executable.options['name'] for executable in executables]
         for name in names[1:]:
             move_tree(
-                os.path.join(build_exe_temp, name),
-                os.path.join(build_exe_temp, names[0]))
+                os.path.join(distpath, name), os.path.join(distpath, names[0]))
 
-        move_tree(os.path.join(build_exe_temp, names[0]), self.build_exe)
+        move_tree(os.path.join(distpath, names[0]), self.build_exe)
 
         shutil.rmtree(self.build_temp, ignore_errors=True)
-        shutil.rmtree(build_exe_temp, ignore_errors=True)
+        shutil.rmtree(distpath, ignore_errors=True)
 
     @make_spin(Spin1, 'Compiling module file locations...')
     def _compile_modules(self):
@@ -239,7 +241,8 @@ class build_exe(distutils.core.Command):
                 options['hiddenimports'].extend(collect_submodules(package))
 
         module_files = self._compile_modules()
-        required_module_files, required_binary_files = self._compile_requirements()
+        required_module_files, required_binary_files = self._compile_requirements(
+        )
 
         for required_file in required_module_files:
             try:
