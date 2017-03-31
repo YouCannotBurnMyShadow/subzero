@@ -1,5 +1,3 @@
---extra-index-url https://pypi.anaconda.org/giumas/simple
-
 # For running tests
 pytest >= 2.7.3  # Testing framework.
 pytest-xdist  # Plugin allowing running tests in parallel.
@@ -8,15 +6,12 @@ pytest-catchlog  # Capture log output separately from stdout/stderr
 pytest-drop-dup-tests # allows specifying order without duplicates
 psutil  # Better subprocess alternative with implemented timeout.
 mock
-bleach
 
 # Install the latest development version of PyInstaller
-git+https://github.com/pyinstaller/pyinstaller.git
-
-git+https://github.com/xoviat/pywix.git
-
-# Windows binaries on lxml are only available for this version. See #2100.
-lxml==3.4.4 ; (sys_platform == 'win32') and (python_version  <= '3.5')
+https://github.com/pyinstaller/pyinstaller/archive/develop.zip
+ 
+# Install the latest development verison of pywix/go_msi
+https://github.com/xoviat/pywix/archive/master.zip
 
 # Helper tools
 check-manifest  # Checks MANIFEST.in
