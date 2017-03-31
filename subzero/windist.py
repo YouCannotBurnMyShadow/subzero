@@ -110,11 +110,13 @@ class bdist_msi(d_bdist_msi):
         for shortcut in self.shortcuts:
             name, target = [s.strip() for s in shortcut.split('=')]
 
+            assert os.path.isfile(
+                os.path.join(self.bdist_dir, '{}.exe'.format(target)))
+
             shortcuts.append({
                 'name': invalid.sub('', name),
                 'description': self.description,
-                'target': '[INSTALLDIR]\\{}.exe'.format(
-                    target),  # TODO: cross check against executables
+                'target': '[INSTALLDIR]\\{}.exe'.format(target),
                 'wdir': 'INSTALLDIR',
                 'arguments': ''
             })
