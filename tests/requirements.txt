@@ -9,7 +9,10 @@ mock
 
 # Install the latest development version of PyInstaller
 https://github.com/pyinstaller/pyinstaller/archive/develop.zip
- 
+
+# Install pywix with no-binary to force re-execution on each build
+--no-binary pywix
+
 # Helper tools
 check-manifest  # Checks MANIFEST.in
 pyroma  # Checks if package follows best practices of Python packaging.
