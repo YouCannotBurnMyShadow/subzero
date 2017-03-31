@@ -33,7 +33,7 @@ class bdist_msi(d_bdist_msi):
         self.data = self.data or {}
         self.add_to_path = self.add_to_path or False
         self.target_name = self.target_name or ''
-        self.upgrade_code = self.upgrade_code or generate_guid()
+        self.upgrade_code = (self.upgrade_code or generate_guid()).strip('{}')
 
         if self.initial_target_dir is None:
             if distutils.util.get_platform() == 'win-amd64':
