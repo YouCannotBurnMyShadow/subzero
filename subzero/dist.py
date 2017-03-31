@@ -283,6 +283,7 @@ class build_exe(distutils.core.Command):
 
         return script_path
 
+    @make_spin(Spin1, 'Compiling executable...')
     @staticmethod
     def _freeze(executable, workpath, distpath):
         log.logger.setLevel('DEBUG')
