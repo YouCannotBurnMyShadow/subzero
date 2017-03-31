@@ -28,7 +28,7 @@ setup(
         'pipdeptree',
         'pyspin',
         'deepmerge',
-        'PyRTF>=0.47.3',
+        'PyRTF3>=0.47.3',
         'pywix>=0.2;sys_platform == "win32"',
         'glob2;python_version<"3.5"',
         'pathlib;python_version<"3.4"',
