@@ -157,7 +157,9 @@ class bdist_msi(d_bdist_msi):
 
     @make_spin(Spin1, 'Building installer...')
     def _build_msi(self):
-        msi = '{}.msi'.format(build_dir())
+        msi = '{}-{}-{}.msi'.format(self.distribution.get_name(),
+                                    self.distribution.metadata.get_version(),
+                                    build_dir())
         with enter_directory(self.bdist_dir):
             go_msi.make(msi=msi)
 
