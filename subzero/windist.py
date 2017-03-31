@@ -7,7 +7,7 @@ import go_msi
 import re
 import io
 
-from .utils import build_dir, enter_directory, generate_guid
+from .utils import build_dir, enter_directory, generate_guid, get_arch
 from .rtf import generate_rtf
 from pyspin.spin import make_spin, Spin1
 from distutils.command.bdist_msi import bdist_msi as d_bdist_msi
@@ -160,8 +160,14 @@ class bdist_msi(d_bdist_msi):
         msi = '{}-{}-{}.msi'.format(self.distribution.get_name(),
                                     self.distribution.metadata.get_version(),
                                     build_dir())
+
+        if get_arch() == 64:
+            arch = 'amd64'
+        else:
+            arch = '386'
+
         with enter_directory(self.bdist_dir):
-            go_msi.make(msi=msi)
+            go_msi.make(msi=msi, arch=arch)
 
         shutil.move(
             os.path.join(self.bdist_dir, msi), os.path.join(

@@ -1,18 +1,19 @@
 import sys
-
-if sys.version_info >= (3, 4):
-    from contextlib import suppress
-else:
-    from contextlib2 import suppress
-
-from PyInstaller.building.makespec import main as makespec_main
+import struct
 import inspect
 import uuid
 import os
 import distutils
 import deepmerge
 import pathlib
+
+from PyInstaller.building.makespec import main as makespec_main
 from contextlib import contextmanager
+
+if sys.version_info >= (3, 4):
+    from contextlib import suppress
+else:
+    from contextlib2 import suppress
 
 if sys.version_info >= (3, 5):
     from glob import iglob
@@ -118,3 +119,7 @@ def enter_directory(path):
     os.chdir(path)
     yield
     os.chdir(current_directory)
+
+
+def get_arch():
+    return 8 * struct.calcsize("P")
