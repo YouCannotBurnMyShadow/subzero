@@ -10,9 +10,6 @@ mock
 # Install the latest development version of PyInstaller
 https://github.com/pyinstaller/pyinstaller/archive/develop.zip
  
-# Install the latest development verison of pywix/go_msi
-https://github.com/xoviat/pywix/archive/master.zip
-
 # Helper tools
 check-manifest  # Checks MANIFEST.in
 pyroma  # Checks if package follows best practices of Python packaging.
