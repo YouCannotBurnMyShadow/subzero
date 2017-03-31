@@ -5,8 +5,10 @@ import shutil
 import json
 import go_msi
 import re
+import io
 
 from .utils import build_dir, enter_directory, generate_guid
+from .rtf import generate_rtf
 from pyspin.spin import make_spin, Spin1
 from distutils.command.bdist_msi import bdist_msi as d_bdist_msi
 
@@ -66,9 +68,8 @@ class bdist_msi(d_bdist_msi):
             os.path.dirname(self.bdist_dir),
             'temp' + os.path.basename(self.bdist_dir)[3:])
 
-        self._license = '{}.rtf'.format(
-            generate_guid())  #  The name of the generated RTF license file
-        self._license_path = os.path.join(self.bdist_dir, self._license)
+        self._license = os.path.join(self.build_temp,
+                                     '{}.rtf'.format(generate_guid()))
 
     def initialize_options(self):
         distutils.command.bdist_msi.bdist_msi.initialize_options(self)
@@ -124,15 +125,11 @@ class bdist_msi(d_bdist_msi):
         return shortcuts
 
     def _write_license(self, fh):
-        with enter_directory(self.build_temp):
-            txt = generate_guid()
-            with open(txt, 'w+') as lfh:
-                lfh.write(self.license_text)
+        lfh = io.StringIO()
+        lfh.write(self.license_text)
+        lfh.seek(0)
 
-            go_msi.to_rtf(src=txt, out=self._license, reencode=True)
-
-            with open(self._license, 'r') as lfh:
-                shutil.copyfileobj(lfh, fh)
+        shutil.copyfileobj(generate_rtf(lfh), fh)
 
     def _write_json(self, fh):
         files, directories = self._harvest_files(
@@ -141,7 +138,7 @@ class bdist_msi(d_bdist_msi):
         config = {
             "product": self.distribution.get_name(),
             "company": self.distribution.get_author(),
-            "license": os.path.abspath(self._license_path),
+            "license": os.path.abspath(self._license),
             "version": self.distribution.metadata.get_version(),
             "upgrade-code": self.upgrade_code,
             "files": {
@@ -189,7 +186,7 @@ class bdist_msi(d_bdist_msi):
         # bdist_dir = os.path.abspath(self.bdist_dir)
         # target_name = os.path.abspath(self.target_name)
 
-        with open(self._license_path, 'w+') as fh:
+        with open(self._license, 'w+') as fh:
             self._write_license(fh)
 
         with open(os.path.join(self.bdist_dir, 'wix.json'), 'w+') as fh:
