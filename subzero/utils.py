@@ -7,8 +7,10 @@ import distutils
 import deepmerge
 import pathlib
 
+from PyInstaller import log
 from PyInstaller.building.makespec import main as makespec_main
 from contextlib import contextmanager
+from distutils.debug import DEBUG
 
 if sys.version_info >= (3, 4):
     from contextlib import suppress
@@ -27,6 +29,11 @@ else:
         else:
             return glob.iglob(path)
 
+
+if DEBUG:
+    log.logger.setLevel('DEBUG')
+else:
+    log.logger.setLevel('ERROR')
 
 entry_keys = [
     'console_scripts',
