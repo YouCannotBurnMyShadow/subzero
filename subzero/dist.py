@@ -45,35 +45,6 @@ class build_exe(distutils.core.Command):
         if self.build_exe is None:
             self.build_exe = os.path.join(self.build_base, build_dir())
 
-        try:
-            self.distribution.install_requires = list(
-                self.distribution.install_requires)
-        except TypeError:
-            self.distribution.install_requires = []
-
-        try:
-            self.distribution.setup_requires = list(
-                self.distribution.setup_requires)
-        except TypeError:
-            self.distribution.setup_requires = []
-
-        try:
-            self.distribution.packages = list(self.distribution.packages)
-        except TypeError:
-            self.distribution.packages = []
-
-        try:
-            self.distribution.scripts = list(self.distribution.scripts)
-        except TypeError:
-            self.distribution.scripts = []
-
-        # TODO: deduplicate this code into utils
-        self.distribution.entry_points.setdefault('console_scripts', [])
-        self.distribution.entry_points.setdefault('gui_scripts', [])
-
-        if not hasattr(self.distribution, 'setup_requires'):
-            self.distribution.setup_requires = []
-
     def run(self):
         entry_points = {}
         gui_scripts = []
