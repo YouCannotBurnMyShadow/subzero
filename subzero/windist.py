@@ -12,8 +12,6 @@ from .rtf import write_rtf
 from pyspin.spin import make_spin, Spin1
 from distutils.command.bdist_msi import bdist_msi as d_bdist_msi
 
-__all__ = ["bdist_msi"]
-
 
 class bdist_msi(d_bdist_msi):
     user_options = distutils.command.bdist_msi.bdist_msi.user_options + [

@@ -1,4 +1,3 @@
-import io
 import textwrap
 
 from PyRTF.Renderer import Renderer
@@ -29,7 +28,8 @@ def write_rtf(fh, fout):
         if not line or line.isspace():
             is_blank = True
         if is_blank:
-            # first element of paragraph_text is left-aligned, subsequent elements are centered
+            # first element of paragraph_text is left-aligned, subsequent
+            # elements are centered
             is_centered = False
             for sec_line in paragraph_text:
                 if is_centered:

@@ -1,6 +1,5 @@
 import distutils.command.build
 import distutils.version
-import inspect
 import json
 import ntpath
 import os
@@ -9,7 +8,6 @@ import pkg_resources
 import shutil
 import subprocess
 import sys
-import uuid
 from subprocess import CalledProcessError
 
 import PyInstaller.__main__
@@ -124,7 +122,8 @@ class build_exe(distutils.core.Command):
         for executable in executables:
             self._freeze(executable, workpath, distpath)
 
-        ## TODO: Compare file hashes to make sure we haven't replaced files with a different version
+        # TODO: Compare file hashes to make sure we haven't replaced files with
+        # a different version
         names = [executable.options['name'] for executable in executables]
         for name in names[1:]:
             move_tree(
@@ -205,7 +204,7 @@ class build_exe(distutils.core.Command):
 
     def _discover_dependencies(self, options):
         # Requirements cannot be assumed to be modules / packages
-        #options['hiddenimports'].extend(self.distribution.install_requires)
+        # options['hiddenimports'].extend(self.distribution.install_requires)
 
         if version.parse(sys.version[0:3]) >= version.parse('3.4'):
             for package in self.distribution.packages:
@@ -239,7 +238,8 @@ class build_exe(distutils.core.Command):
         # entry_point.module_name is string representing module name
         # entry_point.name is string representing script name
 
-        # script name must not be a valid module name to avoid name clashes on import
+        # script name must not be a valid module name to avoid name clashes on
+        # import
         script_path = os.path.join(workpath, '{}.py'.format(entry_point.name))
         with open(script_path, 'w+') as fh:
             fh.write("import {0}\n".format(entry_point.module_name))
