@@ -257,8 +257,6 @@ class build_exe(distutils.core.Command):
     @staticmethod
     @make_spin(Spin1, 'Compiling executable...')
     def _freeze(executable, workpath, distpath):
-        log.logger.setLevel('DEBUG')
-
         with suppress(OSError):
             os.remove(
                 os.path.join(executable.options['specpath'], '{}.spec'.format(

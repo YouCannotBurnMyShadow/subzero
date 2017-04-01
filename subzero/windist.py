@@ -11,6 +11,8 @@ from .utils import build_dir, enter_directory, generate_guid, get_arch
 from .rtf import write_rtf
 from pyspin.spin import make_spin, Spin1
 from distutils.command.bdist_msi import bdist_msi as d_bdist_msi
+from PyInstaller import log
+from subprocess import CalledProcessError
 
 
 class bdist_msi(d_bdist_msi):
@@ -166,7 +168,10 @@ class bdist_msi(d_bdist_msi):
             arch = '386'
 
         with enter_directory(self.bdist_dir):
-            go_msi.make(msi=msi, arch=arch)
+            try:
+                go_msi.make(msi=msi, arch=arch)
+            except CalledProcessError:
+                log.logger.exception('go-msi failed')
 
         shutil.move(
             os.path.join(self.bdist_dir, msi), os.path.join(
