@@ -160,7 +160,7 @@ class bdist_msi(d_bdist_msi):
     def _build_msi(self):
         msi = '{}-{}-{}.msi'.format(self.distribution.get_name(),
                                     self.distribution.metadata.get_version(),
-                                    build_dir())
+                                    build_dir()).replace(' ', '_')
 
         if get_arch() == 64:
             arch = 'amd64'
