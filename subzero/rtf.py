@@ -6,9 +6,9 @@ from PyRTF.document.paragraph import ParagraphPropertySet, Paragraph
 from PyRTF.Elements import Document, Section
 
 
-def generate_rtf(fh):
+def write_rtf(fh, fout):
     """
-    Generates a rich text file object given a license file-like object
+    Writes the text found in fh to rtf found in fout
     """
     wordpad_header = textwrap.dedent(r'''
         {\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1033{\fonttbl{\f0\fnil\fcharset255 Times New Roman;}
@@ -50,9 +50,5 @@ def generate_rtf(fh):
             paragraph_text[0] += ' ' + line
             paragraph_text[0] = paragraph_text[0].strip()
 
-    f = io.StringIO()
-    f.write(wordpad_header)
-    r.Write(doc, f)
-    f.seek(0)
-
-    return f
+    fout.write(wordpad_header)
+    r.Write(doc, fout)

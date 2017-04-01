@@ -8,7 +8,7 @@ import re
 import io
 
 from .utils import build_dir, enter_directory, generate_guid, get_arch
-from .rtf import generate_rtf
+from .rtf import write_rtf
 from pyspin.spin import make_spin, Spin1
 from distutils.command.bdist_msi import bdist_msi as d_bdist_msi
 
@@ -133,7 +133,7 @@ class bdist_msi(d_bdist_msi):
         lfh.write(self.license_text)
         lfh.seek(0)
 
-        shutil.copyfileobj(generate_rtf(lfh), fh)
+        write_rtf(lfh, fh)
 
     def _write_json(self, fh):
         files, directories = self._harvest_files(
