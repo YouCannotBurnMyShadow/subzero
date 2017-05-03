@@ -105,16 +105,17 @@ before_test:
 test_script:
   # Run the tests appropriate for this entry in the test matrix. Skip tests
   # if we're just updating the cache.
-  - "if not \"%APPVEYOR_SCHEDULED_BUILD%\" == \"True\" (%CMD_IN_ENV% %TEST_CMD% )"
+  - ps: |
+      If ($env:APPVEYOR_REPO_TAG -ne "true" -and $env:APPVEYOR_SCHEDULED_BUILD -ne "true") {
+          Invoke-Command -ScriptBlock { & cmd /c "%CMD_IN_ENV% %TEST_CMD%" }
+      }
 
 artifacts:
   - path: chocolatey.log
 
 on_success:
   - ps: |
-      If ($env:APPVEYOR_REPO_TAG -eq "true") {
-        python -m pip install --upgrade bleach
-        
+      If ($env:APPVEYOR_REPO_TAG -eq "true") {        
         python setup.py sdist bdist_wheel
         Invoke-Expression "twine upload -u $env:PYPI_USERNAME -p $env:PYPI_PASSWORD --repository-url https://upload.pypi.org/legacy/ --skip-existing dist/*" 2>&1 | Out-Null
       }
