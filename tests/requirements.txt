@@ -24,3 +24,4 @@ pytest-cov
 packaging
 setuptools-markdown  # For building wheels
 twine
+bleach>=2.0.0
