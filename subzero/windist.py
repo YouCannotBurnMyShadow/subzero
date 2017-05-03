@@ -8,11 +8,11 @@ import re
 import io
 
 from .utils import build_dir, enter_directory, generate_guid, get_arch
-from .rtf import generate_rtf
+from .rtf import write_rtf
 from pyspin.spin import make_spin, Spin1
 from distutils.command.bdist_msi import bdist_msi as d_bdist_msi
-
-__all__ = ["bdist_msi"]
+from PyInstaller import log
+from subprocess import CalledProcessError
 
 
 class bdist_msi(d_bdist_msi):
@@ -100,7 +100,7 @@ class bdist_msi(d_bdist_msi):
             for name in os.listdir():
                 if os.path.isdir(name):
                     directories.append(name)
-                else:
+                elif name != 'wix.json':
                     files.append(name)
 
         return files, directories
@@ -130,7 +130,7 @@ class bdist_msi(d_bdist_msi):
         lfh.write(self.license_text)
         lfh.seek(0)
 
-        shutil.copyfileobj(generate_rtf(lfh), fh)
+        write_rtf(lfh, fh)
 
     def _write_json(self, fh):
         files, directories = self._harvest_files(
@@ -168,7 +168,10 @@ class bdist_msi(d_bdist_msi):
             arch = '386'
 
         with enter_directory(self.bdist_dir):
-            go_msi.make(msi=msi, arch=arch)
+            try:
+                go_msi.make(msi=msi, arch=arch)
+            except CalledProcessError:
+                log.logger.exception('go-msi failed')
 
         shutil.move(
             os.path.join(self.bdist_dir, msi), os.path.join(

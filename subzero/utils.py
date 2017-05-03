@@ -5,7 +5,6 @@ import uuid
 import os
 import distutils
 import deepmerge
-import pathlib
 
 from PyInstaller import log
 from PyInstaller.building.makespec import main as makespec_main

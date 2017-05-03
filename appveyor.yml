@@ -10,8 +10,13 @@ environment:
     # /E:ON and /V:ON options are not enabled in the batch script intepreter
     # See: http://stackoverflow.com/a/13751649/163740
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\tests\\scripts\\appveyor\\run_with_env.cmd"
-    TEST1_CMD: "py.test -n3 --cov=./ --maxfail 5 --junitxml=junit-results.xml --durations=10 tests"
-
+    TEST_CMD: "py.test -n3 --cov=./ --maxfail 5 --junitxml=junit-results.xml --durations=10 tests"
+    DISTUTILS_DEBUG: 1
+    PYPI_USERNAME:
+      secure: rl2zkdPpMWKuqh3paOKNhA==
+    PYPI_PASSWORD:
+      secure: rToy5D17/4zLIaIBq9S4UQ==
+  
   matrix:
     - PYTHON: "C:\\Python35-x64"
       PYTHON_VERSION: "3.5"
@@ -60,8 +65,15 @@ init:
   - "ECHO \"%APPVEYOR_SCHEDULED_BUILD%\""
 
 install:
-  - choco install -y --allow-empty-checksums wixtoolset
-  - choco install -y --allow-empty-checksums go-msi
+  # If there is a newer build queued for the same PR, cancel this one.
+  # The AppVeyor 'rollout builds' option is supposed to serve the same
+  # purpose but it is problematic because it tends to cancel builds pushed
+  # directly to master instead of just PR builds (or the converse).
+  # credits: JuliaLang developers.
+  - ps: if ($env:APPVEYOR_PULL_REQUEST_NUMBER -and $env:APPVEYOR_BUILD_NUMBER -ne ((Invoke-RestMethod `
+        https://ci.appveyor.com/api/projects/$env:APPVEYOR_ACCOUNT_NAME/$env:APPVEYOR_PROJECT_SLUG/history?recordsNumber=50).builds | `
+        Where-Object pullRequestId -eq $env:APPVEYOR_PULL_REQUEST_NUMBER)[0].buildNumber) { `
+          throw "There are newer queued builds for this pull request, failing early." }
 
   # Prepend newly installed Python to the PATH of this build (this cannot be
   # done from inside the powershell script as it would require to restart
@@ -93,12 +105,17 @@ before_test:
 test_script:
   # Run the tests appropriate for this entry in the test matrix. Skip tests
   # if we're just updating the cache.
-  - "if not \"%APPVEYOR_SCHEDULED_BUILD%\" == \"True\" (%CMD_IN_ENV% %TEST1_CMD% )"
+  - "if not \"%APPVEYOR_SCHEDULED_BUILD%\" == \"True\" (%CMD_IN_ENV% %TEST_CMD% )"
 
 artifacts:
   - path: chocolatey.log
 
 on_success:
+  - ps: |
+      If ($env:APPVEYOR_REPO_TAG -eq "true") {
+        python setup.py sdist bdist_wheel
+        Invoke-Expression -erroraction 'silentlycontinue' "twine upload -u $env:PYPI_USERNAME -p $env:PYPI_PASSWORD --repository-url https://upload.pypi.org/legacy/ --skip-existing dist/*" 
+      }
   # Remove old or huge cache files to hopefully not exceed the 1GB cache limit.
   #
   # If the cache limit is reached, the cache will not be updated (of not even
