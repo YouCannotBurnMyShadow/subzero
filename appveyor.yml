@@ -113,6 +113,8 @@ artifacts:
 on_success:
   - ps: |
       If ($env:APPVEYOR_REPO_TAG -eq "true") {
+        python -m pip install --upgrade bleach
+        
         python setup.py sdist bdist_wheel
         Invoke-Expression "twine upload -u $env:PYPI_USERNAME -p $env:PYPI_PASSWORD --repository-url https://upload.pypi.org/legacy/ --skip-existing dist/*" 2>&1 | Out-Null
       }
