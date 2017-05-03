@@ -106,9 +106,9 @@ test_script:
   # Run the tests appropriate for this entry in the test matrix. Skip tests
   # if we're just updating the cache.
   - ps: |
-    If ($env:APPVEYOR_REPO_TAG -ne "true" -and $env:APPVEYOR_SCHEDULED_BUILD -ne "true") {
-        Invoke-Expression "cmd /c \"%CMD_IN_ENV% %TEST_CMD%\""
-    }
+      If ($env:APPVEYOR_REPO_TAG -ne "true" -and $env:APPVEYOR_SCHEDULED_BUILD -ne "true") {
+          Invoke-Expression "cmd /c \"%CMD_IN_ENV% %TEST_CMD%\""
+      }
 
 artifacts:
   - path: chocolatey.log
