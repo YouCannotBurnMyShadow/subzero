@@ -114,7 +114,7 @@ on_success:
   - ps: |
       If ($env:APPVEYOR_REPO_TAG -eq "true") {
         python setup.py sdist bdist_wheel
-        Invoke-Expression -erroraction 'silentlycontinue' "twine upload -u $env:PYPI_USERNAME -p $env:PYPI_PASSWORD --repository-url https://upload.pypi.org/legacy/ --skip-existing dist/*" 
+        Invoke-Expression "twine upload -u $env:PYPI_USERNAME -p $env:PYPI_PASSWORD --repository-url https://upload.pypi.org/legacy/ --skip-existing dist/*" 2>&1 | Out-Null
       }
   # Remove old or huge cache files to hopefully not exceed the 1GB cache limit.
   #
