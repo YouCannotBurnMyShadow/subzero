@@ -100,9 +100,6 @@ class bdist_msi(d_bdist_msi):
                     directories.append(name)
                 elif name != 'wix.json':
                     files.append(name)
-                else:
-                    raise ValueError(
-                        'wix.json cannot currently be a file name')
 
         return files, directories
 
