@@ -22,6 +22,6 @@ pycmd  # Contains 'py.cleanup' that removes all .pyc files and similar.
 codecov
 pytest-cov
 packaging
-setuptools-markdown  # For building wheels
+git+https://github.com/msabramo/setuptools-markdown.git  # For building wheels
 twine
 bleach>=2.0.0
