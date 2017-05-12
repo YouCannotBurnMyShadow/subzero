@@ -16,6 +16,7 @@ setup(
     platforms='any',
     keywords=['pyinstaller'],
     install_requires=[
+        'funcsigs', # inspect.signature support for py2 and 3.3+
         'PyInstaller',
         'packaging',
         'pipdeptree',

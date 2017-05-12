@@ -1,3 +1,4 @@
 include versioneer.py
 include subzero/_version.py
 include LICENSE
+include README.md

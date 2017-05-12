@@ -23,7 +23,7 @@ def install_requirements(requirements):
     if not requirements:
         return
 
-    command = [sys.executable, '-m', 'pip', 'install', '--user'] + requirements
+    command = [sys.executable, '-m', 'pip', 'install'] + requirements
     try:
         subprocess.check_output(command, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
@@ -70,5 +70,4 @@ def setup(**attrs):
             str(entry_point)
             for entry_point in attrs['entry_points'][entry_key]
         ]
-
     distutils_setup(**attrs)

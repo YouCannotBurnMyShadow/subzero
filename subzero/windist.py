@@ -1,8 +1,12 @@
+from __future__ import division, print_function, absolute_import, unicode_literals
+
 import distutils.errors
 import distutils.util
 import os
 import shutil
 import json
+
+import errno
 import go_msi
 import re
 import io
@@ -90,7 +94,7 @@ class bdist_msi(d_bdist_msi):
         # TODO: Parse other types of license files
         for file in ['LICENSE', 'LICENSE.txt']:
             if os.path.isfile(file):
-                self.license_text = open(file).read()
+                self.license_text = io.open(file).read()
                 break
         else:
             self.license_text = ''
@@ -101,7 +105,7 @@ class bdist_msi(d_bdist_msi):
         files = []
 
         with enter_directory(self.bdist_dir):
-            for name in os.listdir():
+            for name in os.listdir('.'):
                 if os.path.isdir(name):
                     directories.append(name)
                 elif name != 'wix.json':
@@ -198,7 +202,13 @@ class bdist_msi(d_bdist_msi):
         except OSError:
             pass
 
-        os.makedirs(self.build_temp, exist_ok=True)
+        try:
+            os.makedirs(self.build_temp)  # exist_ok not available in py2, so we just catch the exception
+        except OSError as exc:
+            if exc.errno == errno.EEXIST and os.path.isdir(self.build_temp):
+                pass
+            else:
+                raise
 
         # Resolve all directory names here
         # build_temp = os.path.abspath(self.build_temp)

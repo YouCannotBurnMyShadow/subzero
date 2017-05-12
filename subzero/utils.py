@@ -1,6 +1,7 @@
+
 import sys
 import struct
-import inspect
+from funcsigs import signature
 import uuid
 import os
 import distutils
@@ -28,11 +29,14 @@ else:
         else:
             return glob.iglob(path)
 
-
-if DEBUG:
-    log.logger.setLevel('DEBUG')
-else:
-    log.logger.setLevel('ERROR')
+try:
+    # Not available in PyInstaller?
+    if DEBUG:
+        log.logger.setLevel('DEBUG')
+    else:
+        log.logger.setLevel('ERROR')
+except:
+    pass
 
 entry_keys = [
     'console_scripts',
@@ -64,7 +68,7 @@ def merge_defaults(a, b):
 
 def makespec_args():
     names = ['datas']  # signature does not detect datas for some reason
-    for name, parameter in inspect.signature(makespec_main).parameters.items():
+    for name, parameter in signature(makespec_main).parameters.items():
         if name not in (excluded_args + ['args', 'kwargs']):
             names.append(name)
 
