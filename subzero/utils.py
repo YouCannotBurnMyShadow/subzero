@@ -1,13 +1,14 @@
 
 import sys
 import struct
+
+import logging
 from funcsigs import signature
 import uuid
 import os
 import distutils
 import deepmerge
 
-from PyInstaller import log
 from PyInstaller.building.makespec import main as makespec_main
 from contextlib import contextmanager
 from distutils.debug import DEBUG
@@ -29,14 +30,10 @@ else:
         else:
             return glob.iglob(path)
 
-try:
-    # Not available in PyInstaller?
-    if DEBUG:
-        log.logger.setLevel('DEBUG')
-    else:
-        log.logger.setLevel('ERROR')
-except:
-    pass
+if DEBUG:
+    logging.getLogger('PyInstaller').setLevel('DEBUG')
+else:
+    logging.getLogger('PyInstaller').setLevel('ERROR')
 
 entry_keys = [
     'console_scripts',
