@@ -4,11 +4,8 @@ import os
 
 from setuptools import setup, find_packages
 
-import versioneer
-
 setup(
     name='subzero',
-    version=versioneer.get_version(),
     description='PyInstaller setuptools integration',
     author='Mars Galactic',
     author_email='xoviat@users.noreply.github.com',
@@ -18,7 +15,6 @@ setup(
         os.path.join(os.path.dirname(__file__), 'LICENSE')).readline().strip(),
     platforms='any',
     keywords=['pyinstaller'],
-    classifiers=[],
     install_requires=[
         'PyInstaller',
         'packaging',
@@ -31,6 +27,9 @@ setup(
         'pathlib;python_version<"3.4"',
         'contextlib2;python_version<"3.4"',
     ],
-    cmdclass=versioneer.get_cmdclass(),
-    setup_requires=['setuptools-markdown'],
+    setup_requires=[
+        'setuptools-markdown',
+        'setuptools_scm',
+    ],
+    use_scm_version=True,
     long_description_markdown_filename='README.md')
