@@ -17,13 +17,15 @@ from subprocess import CalledProcessError
 
 class bdist_msi(d_bdist_msi):
     user_options = distutils.command.bdist_msi.bdist_msi.user_options + [
+
         ('add-to-path=', None, 'add target dir to PATH environment variable'),
         ('upgrade-code=', None, 'upgrade code to use'),
         ('initial-target-dir=', None, 'initial target directory'),
         ('target-name=', None, 'name of the file to create'),
         ('directories=', None, 'list of 3-tuples of directories to create'),
         ('data=', None, 'dictionary of data indexed by table name'),
-        ('product-code=', None, 'product code to use')
+        ('product-code=', None, 'product code to use'),
+        ('wix-template-dir=', None, 'folder to go_msi wix-templates'),
     ]
 
     def finalize_options(self):
@@ -71,6 +73,7 @@ class bdist_msi(d_bdist_msi):
 
         self._license = os.path.join(self.build_temp,
                                      '{}.rtf'.format(generate_guid()))
+        self.wix_template_dir = self.wix_template_dir
 
     def initialize_options(self):
         distutils.command.bdist_msi.bdist_msi.initialize_options(self)
@@ -82,6 +85,7 @@ class bdist_msi(d_bdist_msi):
         self.directories = None
         self.data = None
         self.shortcuts = []
+        self.wix_template_dir = None
 
         # TODO: Parse other types of license files
         for file in ['LICENSE', 'LICENSE.txt']:
@@ -169,7 +173,10 @@ class bdist_msi(d_bdist_msi):
 
         with enter_directory(self.bdist_dir):
             try:
-                go_msi.make(msi=msi, arch=arch)
+                if self.wix_template_dir:
+                    go_msi.make(msi=msi, arch=arch, src=self.wix_template_dir)
+                else:
+                    go_msi.make(msi=msi, arch=arch)
             except CalledProcessError:
                 log.logger.exception('go-msi failed')
 
