@@ -60,6 +60,7 @@ setup(
         'bdist_msi': {
             'upgrade_code': '84b31ed7-3985-46ad-9d07-eb4140a6d44a',
             'shortcuts': ['My Program = gui'],
+            'wix_template_dir': os.path.abspath('./wix_templates'),
         }
     })
 ```
