@@ -91,7 +91,12 @@ class build_exe(distutils.command.build.build):
 
         self.run_command('build')
 
-        for default_option in ['pathex', 'hiddenimports', 'binaries']:
+        for default_option in [
+            'pathex', 'hiddenimports', 'binaries',
+            'collect_all', 'collect_binaries',
+            'collect_data', 'collect_submodules',
+            'copy_metadata', 'recursive_copy_metadata',
+        ]:
             options.setdefault(default_option, [])
 
         # by convention, all paths appended to py_options must be absolute
