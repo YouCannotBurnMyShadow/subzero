@@ -1,22 +1,17 @@
 # subzero
+
+[![Codacy Badge][6]][7]
 [![build status][2]][3]
 [![Codecov][5]][4]
+
 ## What is Subzero?
 
-Subzero allows you to rapidly deploy your [frozen][1] Python application with minimal effort and additional
-code. Subzero does this by providing a simple and intuitive wrapper for PyInstaller coupled with an MSI
-builder. With a few lines of code and a single command, you can go directly from Python code to a compiled MSI
-installer.
-
-[1]: http://docs.python-guide.org/en/latest/shipping/freezing/
-[2]: https://ci.appveyor.com/api/projects/status/github/xoviat/subzero?branch=master&svg=true
-[3]: https://ci.appveyor.com/project/xoviat/pyinstaller-utils
-[4]: https://codecov.io/gh/xoviat/subzero
-[5]: https://img.shields.io/codecov/c/github/xoviat/subzero.svg?style=flat
-
-## How do I install it?
-
-    pip install subzero
+The goal of subzero is to allow simple and rapid deployment of [frozen][1] Python applications with minimal
+additional effort and developer time. In contrast to other solutions, subzero's philosophy is that having a 
+working application, quickly is more important than optimizing for size or other factors and that generating
+your end product (be it an MSI, or other installer) should take only a few minutes to set up. Subzero builds
+on the extensive development work of other projects, and doesn't re-invent the wheel. Rather, it ties everything
+together in a simple and intuitive manner.
 
 ## How do I use it?
 
@@ -30,54 +25,69 @@ Then run the following command:
 
     python setup.py bdist_msi
 
-That's it! PyInstaller will build all of the entry points and scripts specified in your executable.
+Subzero will the build executables specified in the `entry_points` and `scripts` sections and 
+then create an installer that contains those executables.
 
-## How do I specify options?
-
-In your setup function, you can specify PyInstaller options as follows:
-
-```python
-  setup(...
-        options={
-'         build_exe': {
-              'hiddenimports': [],
-              'pathex': [],
-              'datas': [],
-          },
-          'bdist_msi': {
-              'upgrade_code': '{66620F3A-DC3A-11E2-B341-002219E9B01E}',
-              'shortcuts': [
-                  'ProgramMenuFolder\Hello World = my_project'
-              ],
-          }
-  ...)
-```
-In addition, options can be specified on a per-executable basis replacing each script or entry point with an instance
-of the Executable class and initializing it with the required options, as shown below:
+## Example
 
 ```python
-setup(...
-      entry_points={
-          'console_scripts': [
-              'my_project = hello_world.__main__:main',
-              Executable('gui = hello_world.__main__:gui', icon_file='Sample.ico', windowed=False),
-          ]
-      },
-...)
+setup(
+    name='Name',
+    author='Author',
+    packages=find_packages(),
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
+    install_requires=[
+        'paramiko',
+    ],
+    entry_points={
+        'gui_scripts': [
+            Executable(
+                    'gui = app.__main__:gui',
+                    icon_file='Icon.ico'),
+        ],
+        'console_scripts': [
+            'console = app.__main__:console',
+        ],
+    },
+    options={
+        'build_exe': {
+            'pathex':
+            [os.path.join(os.path.dirname(PyQt5.__file__), 'Qt', 'bin')],
+            'datas':
+            [datafile, '.')],
+        },
+        'bdist_msi': {
+            'upgrade_code': '84b31ed7-3985-46ad-9d07-eb4140a6d44a',
+            'shortcuts': ['My Program = gui'],
+            'wix_template_dir': os.path.abspath('./wix_templates'),
+        }
+    })
 ```
+
+Options are applied first globally from the options dictionary passed to `setup`, and then for each executable
+if the `Executable` class is present for that particular `entry_point` or `script`.
 
 The full array of options for build_exe is available in the PyInstaller documentation. Providing an upgrade code is
 **strongly recommended** for the bdist_msi command. A license agreement will be added to the installer if there is 
 a license text file in the same directory as setup.py.
 
-Note that Subzero currently cannot create shortcuts that are not placed in a root system directory. In other 
-words, you can currently have a shortcut on the desktop of in the program menu but not in a folder on the desktop or in 
-a folder on the program menu. This may be resolved in the future if there is greater interest.
+## Extended import discovery (In beta)
 
-## Cython (currently not in tests)
+In case PyInstaller cannot discover all of your dependencies, you can set `optimize_imports=False`, as shown below.
+This option may discover certain imports previously not found but it may also make your application larger. Note that
+you must add your package requirements in `install_requires` for this option to work!
+
+```python
+    'build_exe': {
+        'optimize_imports': False
+    },
+```
+
+## Cython
 
 Cython modules can also be built because Subzero executes the builtin `build` command before calling 
-PyInstaller. The following is an example setup.py file for a Cython project:
+PyInstaller. Just add your modules to the `ext_modules` key:
 
 ```python
 from setuptools import find_packages, Extension
@@ -85,20 +95,6 @@ from subzero import setup
 
 setup(
     name='hello_world',
-    author='test_author',
-    version='0.1.0',
-    packages=find_packages(),
-    entry_points={
-      'console_scripts': [
-          'my_project = hello_world.__main__:main',
-      ]
-    },
-    options={},
-    install_requires=[],
-    setup_requires=[
-        'setuptools>=18.0',
-        'cython',
-    ],
     ext_modules=[
         Extension(
             'my_module',
@@ -106,3 +102,12 @@ setup(
         )
     ])
 ```
+
+
+[1]: http://docs.python-guide.org/en/latest/shipping/freezing/
+[2]: https://ci.appveyor.com/api/projects/status/github/xoviat/subzero?branch=master&svg=true
+[3]: https://ci.appveyor.com/project/xoviat/pyinstaller-utils
+[4]: https://codecov.io/gh/xoviat/subzero
+[5]: https://img.shields.io/codecov/c/github/xoviat/subzero.svg?style=flat
+[6]: https://api.codacy.com/project/badge/Grade/1568bcb5178b4e4d80dae7840df03f08
+[7]: https://www.codacy.com/app/pywin32/subzero?utm_source=github.com&utm_medium=referral&utm_content=xoviat/subzero&utm_campaign=badger

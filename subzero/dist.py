@@ -1,202 +1,249 @@
-# This file was originally taken from cx_freeze by Anthony Tuininga, and is licensed under the  PSF license.
 
 import distutils.command.build
 import distutils.version
-import inspect
+import json
 import ntpath
 import os
+import pkgutil
+
+import errno
+import pkg_resources
 import shutil
+import subprocess
 import sys
+from subprocess import CalledProcessError
 
 import PyInstaller.__main__
-import pkg_resources
 from PyInstaller.building.makespec import main as makespec_main
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_submodules, get_module_file_attribute
+from PyInstaller import log
 from packaging import version
-from pkg_resources import EntryPoint
+from pkg_resources import EntryPoint, Requirement
+from pyspin.spin import make_spin, Spin1
+from copy import copy
 
-if version.parse(sys.version[0:3]) >= version.parse('3.4'):
-    from contextlib import suppress
-
-__all__ = ["build_exe", "setup"]
-
-
-# Monkeypatches yield_lines to accept executables
-# TODO: Patch in setup function rather than here
-def new_yield_lines(original_yield_lines):
-    def yield_lines(strs):
-        if type(strs) is Executable:
-            return original_yield_lines(str(strs))
-        else:
-            return original_yield_lines(strs)
-
-    return yield_lines
+from .utils import suppress, makespec_args, decode, is_binary, rename_script, build_dir, entry_keys, move_tree
 
 
-pkg_resources.yield_lines = new_yield_lines(pkg_resources.yield_lines)
-
-class build_exe(distutils.core.Command):
+class build_exe(distutils.command.build.build):
     description = "build executables from Python scripts"
     user_options = []
     boolean_options = []
-    _excluded_args = [
-        'scripts',
-        'specpath',
-    ]
-    _executables = []
-
-    @classmethod
-    def makespec_args(cls):
-        names = ['datas']  # signature does not detect datas for some reason
-        for name, parameter in inspect.signature(makespec_main).parameters.items():
-            if name not in (cls._excluded_args + ['args', 'kwargs']):
-                names.append(name)
-
-        return names
-
-    @staticmethod
-    def build_dir():
-        return "exe.{}-{}".format(distutils.util.get_platform(), sys.version[0:3])
-
-    def add_to_path(self, name):
-        sourceDir = getattr(self, name.lower())
-        if sourceDir is not None:
-            sys.path.insert(0, sourceDir)
 
     def initialize_options(self):
         distutils.command.build.build.initialize_options(self)
         self.build_exe = None
+        self.optimize_imports = True
+        self.executables = []
+        self._script_names = []
 
-        for name in self.makespec_args():
+        for name in makespec_args():
             if not getattr(self, name, None):
                 setattr(self, name, None)
 
     def finalize_options(self):
         distutils.command.build.build.finalize_options(self)
         if self.build_exe is None:
-            self.build_exe = os.path.join(self.build_base, self.build_dir())
-
-        try:
-            self.distribution.install_requires = list(self.distribution.install_requires)
-        except TypeError:
-            self.distribution.install_requires = []
-
-        try:
-            self.distribution.packages = list(self.distribution.packages)
-        except TypeError:
-            self.distribution.packages = []
-
-        try:
-            self.distribution.scripts = list(self.distribution.scripts)
-        except TypeError:
-            self.distribution.scripts = []
-
-        self.distribution.entry_points.setdefault('console_scripts', [])
-        for script in self.distribution.scripts + self.distribution.entry_points['console_scripts']:
-            if type(script) is Executable:
-                self._executables.append(script)
-            else:
-                self._executables.append(None)
+            self.build_exe = os.path.join(self.build_base, build_dir())
 
     def run(self):
-        try:
-            entry_points = EntryPoint.parse_map(self.distribution.entry_points)['console_scripts']
-        except KeyError:
-            entry_points = []
-        try:
-            py_options = {}
-            for key, value in dict(self.distribution.command_options['build_exe']).items():
-                py_options[key] = value[1]
-        except (KeyError, TypeError):
-            py_options = {}
+        entry_points = {}
+        gui_scripts = []
 
-        scripts = self.distribution.scripts
-        for required_directory in [self.build_temp, self.build_exe]:
+        entry_points_map = EntryPoint.parse_map(self.distribution.entry_points)
+        for entry_key in entry_keys:
+            with suppress(KeyError):
+                entry_points.update(entry_points_map[entry_key])
+                if entry_key == 'gui_scripts':
+                    gui_scripts.extend(entry_points_map[entry_key].keys())
+
+        try:
+            options = {}
+            for key, value in dict(
+                    self.distribution.command_options['build_exe']).items():
+                options[key] = value[1]
+        except (KeyError, TypeError):
+            options = {}
+
+        scripts = copy(self.distribution.scripts)
+        self.distribution.scripts = []
+
+        workpath = os.path.join(self.build_temp, 'workpath')
+        distpath = os.path.join(self.build_temp, 'distpath')
+
+        for required_directory in [distpath, self.build_exe, workpath]:
             shutil.rmtree(required_directory, ignore_errors=True)
-            os.makedirs(required_directory, exist_ok=True)
+            try:
+                os.makedirs(required_directory) # exist_ok not available in py2, so we just catch the exception
+            except OSError as exc:
+                if exc.errno == errno.EEXIST and os.path.isdir(required_directory):
+                    pass
+                else:
+                    raise
 
         for entry_point in entry_points.values():
-            scripts.append(self._generate_script(entry_point, self.build_temp))
+            scripts.append(self._generate_script(entry_point, workpath))
 
-        lib_dirs = ['lib', 'lib{}'.format(self.build_dir()[3:])]
+        lib_dirs = ['lib', 'lib{}'.format(build_dir()[3:])]
         for lib_dir in lib_dirs:
-            shutil.rmtree(os.path.join(self.build_base, lib_dir), ignore_errors=True)
+            shutil.rmtree(
+                os.path.join(self.build_base, lib_dir), ignore_errors=True)
 
         self.run_command('build')
 
-        for default_option in ['pathex', 'hiddenimports', 'binaries']:
-            py_options.setdefault(default_option, [])
+        for default_option in [
+            'pathex', 'hiddenimports', 'binaries',
+            'collect_all', 'collect_binaries',
+            'collect_data', 'collect_submodules',
+            'copy_metadata', 'recursive_copy_metadata',
+        ]:
+            options.setdefault(default_option, [])
 
         # by convention, all paths appended to py_options must be absolute
-        py_options['hiddenimports'].extend(self.distribution.install_requires)
         for lib_dir in lib_dirs:
             if os.path.isdir(os.path.join(self.build_base, lib_dir)):
-                py_options['pathex'].append(os.path.abspath(os.path.join(self.build_base, lib_dir)))
+                options['pathex'].append(
+                    os.path.abspath(os.path.join(self.build_base, lib_dir)))
 
-        if not py_options['pathex']:
+        if not options['pathex']:
             raise ValueError('Unable to find lib directory!')
+
+        options['specpath'] = os.path.abspath(workpath)
+        options['pathex'].append(os.path.abspath(workpath))
+
+        for i, tp in enumerate(options.setdefault('datas', [])):
+            options['datas'][i] = (os.path.abspath(options['datas'][i][0]),
+                                   options['datas'][i][1])
+
+        if not self.optimize_imports:
+            self._discover_dependencies(options)
+
+        executables = []
+        for script, executable in zip(scripts, self.executables):
+            executable = executable or Executable(script)
+            executable.script = script
+            executable._options = dict(options, **executable.options)
+            executable._options['name'] = '.'.join(
+                ntpath.basename(script).split('.')[:-1])
+            if executable._options['name'] in gui_scripts:
+                executable._options['console'] = False
+
+            executables.append(executable)
+
+        for executable in executables:
+            rename_script(executable)
+
+        for executable in executables:
+            self._freeze(executable, workpath, distpath)
+
+        # TODO: Compare file hashes to make sure we haven't replaced files with
+        # a different version
+        names = [executable.options['name'] for executable in executables]
+        for name in names[1:]:
+            move_tree(
+                os.path.join(distpath, name), os.path.join(distpath, names[0]))
+
+        move_tree(os.path.join(distpath, names[0]), self.build_exe)
+
+        shutil.rmtree(self.build_temp, ignore_errors=True)
+        shutil.rmtree(distpath, ignore_errors=True)
+
+    @make_spin(Spin1, 'Compiling module file locations...')
+    def _compile_modules(self):
+        modules = {}
+
+        for module_finder, name, ispkg in pkgutil.walk_packages():
+            for attempt in range(2):
+                with suppress((AttributeError, ImportError)):
+                    if attempt == 0:
+                        loader = module_finder.find_spec(name).loader
+                        filename = loader.get_filename(name)
+                    elif attempt == 1:
+                        filename = get_module_file_attribute(name)
+                    break
+            else:
+                continue
+
+            modules[os.path.abspath(filename)] = name
+
+        return modules
+
+    @make_spin(Spin1, 'Compiling project requirements...')
+    def _compile_requirements(self):
+        packages = []
+        for requirement in self.distribution.install_requires:
+            requirement = Requirement.parse(requirement)
+            packages.append(requirement.key)
+
+        entries = json.loads(
+            decode(subprocess.check_output(['pipdeptree', '--json'])))
+        updated = True
+        while updated:
+            updated = False
+            for entry in entries:
+                if entry['package']['key'] in packages:
+                    for dependency in entry['dependencies']:
+                        if dependency['key'] not in packages:
+                            packages.append(dependency['key'])
+                            updated = True
+
+        location_string = 'Location:'
+        files_string = 'Files:'
+        module_files = set()
+        binary_files = set()
+
+        for package in packages:
+            in_header = True
+            root = None
+            with suppress(CalledProcessError):
+                for line in decode(
+                        subprocess.check_output(['pip', 'show', '-f', package
+                                                 ])).splitlines():
+                    line = line.strip()
+                    if in_header and line.startswith(location_string):
+                        root = line[len(location_string):]
+                    if in_header and line.startswith(files_string):
+                        assert root is not None
+                        in_header = False
+                        continue
+                    elif not in_header:
+                        full_path = os.path.abspath(
+                            os.path.join(root, line.strip()))
+                        if line.endswith('.py') or line.endswith('.pyc'):
+                            module_files.add(full_path)
+                        if is_binary(line):
+                            binary_files.add(full_path)
+
+        return module_files, binary_files
+
+    def _discover_dependencies(self, options):
+        # Requirements cannot be assumed to be modules / packages
+        # options['hiddenimports'].extend(self.distribution.install_requires)
 
         if version.parse(sys.version[0:3]) >= version.parse('3.4'):
             for package in self.distribution.packages:
-                py_options['hiddenimports'].extend(collect_submodules(package))
+                options['hiddenimports'].extend(collect_submodules(package))
 
-        py_options['specpath'] = os.path.abspath(self.build_temp)
-        py_options['pathex'].append(os.path.abspath(self.build_temp))
+        module_files = self._compile_modules()
+        required_module_files, required_binary_files = self._compile_requirements(
+        )
 
-        self.add_binaries(py_options)
+        for required_file in required_module_files:
+            try:
+                options['hiddenimports'].append(module_files[required_file])
+            except KeyError:
+                log.logger.debug(
+                    'Unable to collect module for {}'.format(required_file))
 
-        names = []
-        for script in scripts:
-            names.append(self._freeze(script, self.build_temp, self.build_exe, py_options.copy()))
+        for required_file in required_binary_files:
+            # FIXME: Add to binaries rather than simply appending to pathex.
+            options['pathex'].append(os.path.dirname(required_file))
 
-        for name in names[1:]:
-            self.move_tree(os.path.join(self.build_exe, name), os.path.join(self.build_exe, names[0]))
-
-        self.move_tree(os.path.join(self.build_exe, names[0]), self.build_exe)
-
-        shutil.rmtree(self.build_temp, ignore_errors=True)
-
-        # TODO: Compare file hashes to make sure we haven't replaced files with a different version
-        for name in names:
-            shutil.rmtree(os.path.join(self.build_exe, name), ignore_errors=True)
-
-    def add_binaries(self, options):
-        for pathex in options['pathex']:
-            for root, dirs, files in os.walk(pathex):
-                for file in files:
-                    if file.endswith(('.so', '.pyd')):
-                        options['binaries'].append(os.path.abspath(os.path.join(pathex, root, file)), file)
-
-
-    def move_tree(self, sourceRoot, destRoot):
-        if not os.path.exists(destRoot):
-            return False
-        ok = True
-        for path, dirs, files in os.walk(sourceRoot):
-            relPath = os.path.relpath(path, sourceRoot)
-            destPath = os.path.join(destRoot, relPath)
-            if not os.path.exists(destPath):
-                os.makedirs(destPath)
-            for file in files:
-                destFile = os.path.join(destPath, file)
-                if os.path.isfile(destFile):
-                    print("Skipping existing file: {}".format(os.path.join(relPath, file)))
-                    ok = False
-                    continue
-                srcFile = os.path.join(path, file)
-                # print "rename", srcFile, destFile
-                os.rename(srcFile, destFile)
-        for path, dirs, files in os.walk(sourceRoot, False):
-            if len(files) == 0 and len(dirs) == 0:
-                os.rmdir(path)
-        return ok
+        options['pathex'] = list(set(options['pathex']))
 
     def _generate_script(self, entry_point, workpath):
         """
         Generates a script given an entry point.
-        :param entry_point:
-        :param workpath:
-        :return: The script location
         """
 
         # note that build_scripts appears to work sporadically
@@ -205,39 +252,39 @@ class build_exe(distutils.core.Command):
         # entry_point.module_name is string representing module name
         # entry_point.name is string representing script name
 
-        # script name must not be a valid module name to avoid name clashes on import
+        # script name must not be a valid module name to avoid name clashes on
+        # import
         script_path = os.path.join(workpath, '{}.py'.format(entry_point.name))
         with open(script_path, 'w+') as fh:
             fh.write("import {0}\n".format(entry_point.module_name))
-            fh.write("{0}.{1}()\n".format(entry_point.module_name, '.'.join(entry_point.attrs)))
-            for package in self.distribution.packages + self.distribution.install_requires:
-                fh.write("import {0}\n".format(package))
+            fh.write("{0}.{1}()\n".format(entry_point.module_name, '.'.join(
+                entry_point.attrs)))
+
+            fh.seek(0)
+            assert '==' not in fh.read()
+
+        # Removed: requirements cannot be assumed to be packages
+        #  + self.distribution.install_requires
 
         return script_path
 
-    def _freeze(self, script, workpath, distpath, options):
-        options['name'] = '.'.join(ntpath.basename(script).split('.')[:-1])
+    @staticmethod
+    @make_spin(Spin1, 'Compiling executable...')
+    def _freeze(executable, workpath, distpath):
+        with suppress(OSError):
+            os.remove(
+                os.path.join(executable.options['specpath'], '{}.spec'.format(
+                    executable.options['name'])))
 
-        executable = self._executables.pop(0)
-        if executable:
-            # We need to apply the script-specific options
-            for option_name, script_option in executable.options.items():
-                options[option_name] = script_option
-
-        if version.parse(sys.version[0:3]) >= version.parse('3.4'):
-            with suppress(OSError):
-                os.remove(os.path.join(options['specpath'], '{}.spec'.format(options['name'])))
-        else:
-            try:
-                os.remove(os.path.join(options['specpath'], '{}.spec'.format(options['name'])))
-            except OSError:
-                pass
-
-        spec_file = PyInstaller.__main__.run_makespec([script], **options)
-        PyInstaller.__main__.run_build(None, spec_file, noconfirm=True, workpath=workpath, distpath=distpath)
+        spec_file = PyInstaller.__main__.run_makespec([executable.script],
+                                                      **executable.options)
+        PyInstaller.__main__.run_build(
+            None,
+            spec_file,
+            noconfirm=True,
+            workpath=workpath,
+            distpath=distpath)
         # os.remove(spec_file)
-
-        return options['name']
 
 
 class Executable(object):
@@ -249,7 +296,7 @@ class Executable(object):
         self._options = {}
 
         for name in kwargs:
-            if name in build_exe.makespec_args():
+            if name in makespec_args():
                 self._options[name] = kwargs[name]
 
     @property

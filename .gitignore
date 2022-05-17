@@ -134,5 +134,8 @@ ENV/
 # Rope project settings
 .ropeproject
 
-.gitignore
 .idea/
+.vscode/
+/xyz.py
+
+*.c
